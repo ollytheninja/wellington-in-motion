@@ -2,6 +2,8 @@
 export class Clock {
   t: number;
   playing = true;
+  /** While true the clock does not advance, even when playing. Used to wait for data to load. */
+  held = false;
   speed: number;
   min: number;
   max: number;
@@ -15,7 +17,7 @@ export class Clock {
 
   /** Advance by `dtMs` of real time. Wraps at the end of the window. */
   tick(dtMs: number): void {
-    if (!this.playing) return;
+    if (!this.playing || this.held) return;
     this.seek(this.t + (dtMs / 1000) * this.speed);
   }
 

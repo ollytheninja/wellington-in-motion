@@ -7,21 +7,15 @@ import type { Network } from "./types";
 import { DEFAULT_SPEED, setupControls, type Controls } from "./ui/controls";
 import { renderCredits } from "./ui/credits";
 
-function aucklandNow(): { date: string; seconds: number } {
+function aucklandToday(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Pacific/Auckland",
-    hourCycle: "h23",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
   }).formatToParts(new Date());
   const get = (type: string) => parts.find((p) => p.type === type)!.value;
-  return {
-    date: `${get("year")}${get("month")}${get("day")}`,
-    seconds: +get("hour") * 3600 + +get("minute") * 60,
-  };
+  return `${get("year")}${get("month")}${get("day")}`;
 }
 
 async function main() {
@@ -29,10 +23,10 @@ async function main() {
   const nets: Partial<Record<Mode, Network>> = { rail, ferry };
   const days: Partial<Record<Mode, Day>> = {};
   const dates = availableDates(rail);
-  const now = aucklandNow();
+  const today = aucklandToday();
 
   // Default to today if the feed covers it, otherwise the nearest date it does.
-  let date = dates.includes(now.date) ? now.date : now.date < dates[0]! ? dates[0]! : dates[dates.length - 1]!;
+  let date = dates.includes(today) ? today : today < dates[0]! ? dates[0]! : dates[dates.length - 1]!;
 
   renderCredits(document.getElementById("credits")!, coastline?.credit ?? null);
 
@@ -67,8 +61,10 @@ async function main() {
 
   rebuild();
   const w = playWindow();
-  const inWindow = date === now.date && now.seconds >= w.min && now.seconds <= w.max;
-  const clock = new Clock(inWindow ? now.seconds : w.min, DEFAULT_SPEED, w.min, w.max);
+  // Always start at the first train, so a reload replays the day from the top.
+  const clock = new Clock(w.min, DEFAULT_SPEED, w.min, w.max);
+  // Hold at the start until the buses arrive, so the day does not run on without them.
+  clock.held = true;
 
   const controls: Controls = setupControls(clock, {
     dates,
@@ -87,16 +83,21 @@ async function main() {
   controls.setPeaks(peaks());
 
   // Buses are most of the data, so they load after trains are already moving.
-  void loadNetwork("bus").then((net) => {
-    nets.bus = net;
-    scene.setBusRoutes(net);
-    rebuild();
-    const next = playWindow();
-    clock.setBounds(next.min, next.max);
-    controls.syncRange(clock);
-    controls.setPeaks(peaks());
-    controls.busesReady();
-  });
+  void loadNetwork("bus")
+    .then((net) => {
+      nets.bus = net;
+      scene.setBusRoutes(net);
+      rebuild();
+      controls.setPeaks(peaks());
+      const next = playWindow();
+      // If nobody has moved the clock, go back to the start of the (possibly wider) window.
+      if (clock.t === w.min) clock.setRange(next.min, next.max);
+      else clock.setBounds(next.min, next.max);
+      controls.syncRange(clock);
+      controls.busesReady();
+    })
+    .catch((err) => console.error("Could not load buses", err))
+    .finally(() => (clock.held = false));
 
   let last = performance.now();
   const frame = (nowMs: number) => {
