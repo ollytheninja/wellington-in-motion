@@ -19,9 +19,6 @@ const HILLSHADE_STYLE: maplibregl.StyleSpecification = {
       type: "raster",
       tiles: [`https://basemaps.linz.govt.nz/v1/tiles/hillshade-igor-dsm/WebMercatorQuad/{z}/{x}/{y}.webp?api=${HILLSHADE_KEY}`],
       tileSize: 256,
-      attribution:
-        'Hillshade: <a href="https://basemaps.linz.govt.nz/" target="_blank" rel="noopener">Sourced from LINZ</a>, ' +
-        '<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>',
     },
   },
   layers: [
@@ -125,7 +122,7 @@ export class Scene {
       style: STYLE,
       bounds: bounds(base.map((b) => b.net)),
       fitBoundsOptions: { padding: { top: 60, bottom: 120, left: 60, right: 60 } },
-      attributionControl: { compact: true, customAttribution: coastline ? [coastline.attribution] : [] },
+      attributionControl: false,
     });
     this.overlay = new MapboxOverlay({ interleaved: false, layers: [] });
     this.map.addControl(this.overlay as unknown as maplibregl.IControl);

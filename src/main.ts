@@ -5,6 +5,7 @@ import { Scene } from "./render/scene";
 import { buildDay, type Day } from "./sim/sim";
 import type { Network } from "./types";
 import { DEFAULT_SPEED, setupControls, type Controls } from "./ui/controls";
+import { renderCredits } from "./ui/credits";
 
 function aucklandNow(): { date: string; seconds: number } {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -32,6 +33,8 @@ async function main() {
 
   // Default to today if the feed covers it, otherwise the nearest date it does.
   let date = dates.includes(now.date) ? now.date : now.date < dates[0]! ? dates[0]! : dates[dates.length - 1]!;
+
+  renderCredits(document.getElementById("credits")!, coastline?.credit ?? null);
 
   const scene = new Scene(
     document.getElementById("map")!,

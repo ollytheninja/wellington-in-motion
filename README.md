@@ -25,8 +25,8 @@ Space toggles play/pause. Drag the slider to scrub. The date picker covers the d
 ## Data and credits
 
 - **Timetables.** Metlink General Transit Feed Specification, Greater Wellington Regional Council. https://www.metlink.org.nz/legal/general-transit-feed-specification
-- **Coastline.** Land Information New Zealand (LINZ), [NZ Coastlines (Topo, 1:50k)](https://data.linz.govt.nz/layer/50258-nz-coastlines-topo-150k/), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). We clip it to the Wellington region and simplify it to 4 m. The app shows this credit in the map's attribution control, taken from `public/data/coastline.json`, so it stays with the data.
-- **Hillshade basemap.** LINZ Basemaps, [hillshade-igor-dsm](https://basemaps.linz.govt.nz/), "Sourced from LINZ", licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). We only change its brightness. The credit shows in the map's attribution control.
+- **Coastline.** Land Information New Zealand (LINZ), [NZ Coastlines (Topo, 1:50k)](https://data.linz.govt.nz/layer/50258-nz-coastlines-topo-150k/), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). We clip it to the Wellington region and simplify it to 4 m. The app shows this credit in its credits box, taken from `public/data/coastline.json`, so it stays with the data.
+- **Hillshade basemap.** LINZ Basemaps, [hillshade-igor-dsm](https://basemaps.linz.govt.nz/), "Sourced from LINZ", licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). We only change its brightness. The credit shows in the credits box.
 
 `make coastline` needs a free LINZ Data Service API key. Put it in `.env` (gitignored, copy `.env.example`) or export `LINZ_API_KEY`. The raw download is cached in `./cache`, also gitignored.
 

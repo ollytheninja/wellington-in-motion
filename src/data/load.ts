@@ -19,10 +19,19 @@ export function availableDates(net: Network): string[] {
   return [...dates].sort();
 }
 
+/** Who to credit for a dataset, as CC BY 4.0 asks. */
+export interface Credit {
+  source: string;
+  sourceUrl: string;
+  licence: string;
+  licenceUrl: string;
+  /** What we did to the data. */
+  changes: string;
+}
+
 export interface Coastline {
   lines: LonLat[][];
-  /** HTML for the map's attribution control. */
-  attribution: string;
+  credit: Credit;
 }
 
 /** The coastline is optional. Returns null if `make coastline` has not been run. */
@@ -32,8 +41,12 @@ export async function loadCoastline(): Promise<Coastline | null> {
   const wire = (await res.json()) as WireCoastline;
   return {
     lines: wire.lines.map(decodeShape),
-    attribution:
-      `Coastline: <a href="${wire.sourceUrl}" target="_blank" rel="noopener">${wire.source}</a>, ` +
-      `<a href="${wire.licenceUrl}" target="_blank" rel="noopener">${wire.licence}</a>. ${wire.changes}`,
+    credit: {
+      source: wire.source,
+      sourceUrl: wire.sourceUrl,
+      licence: wire.licence,
+      licenceUrl: wire.licenceUrl,
+      changes: wire.changes,
+    },
   };
 }
