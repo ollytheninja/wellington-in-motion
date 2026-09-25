@@ -7,6 +7,9 @@ export const LINE_COLOURS: Record<string, string> = {
   JVL: "#3dc8ff",
 };
 
+/** Every bus is the same colour. 200-odd routes would be noise, and violet is clear of the rail colours. */
+export const BUS_COLOUR = "#b48cff";
+
 export const FALLBACK_COLOUR = "#ffffff";
 
 export function hexToRgb(hex: string): [number, number, number] {

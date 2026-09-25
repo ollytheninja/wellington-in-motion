@@ -1,12 +1,19 @@
-import type { Network } from "../types";
+import type { Network, WireNetwork } from "../types";
+import { decodeNetwork } from "./wire";
 
-export async function loadNetwork(): Promise<Network> {
-  const res = await fetch(`${import.meta.env.BASE_URL}data/network.json`);
-  if (!res.ok) throw new Error(`network.json: ${res.status}. Run "npm run data" first.`);
-  return (await res.json()) as Network;
+export type Mode = "rail" | "bus";
+
+const FILES: Record<Mode, string> = { rail: "network.json", bus: "buses.json" };
+
+export async function loadNetwork(mode: Mode): Promise<Network> {
+  const res = await fetch(`${import.meta.env.BASE_URL}data/${FILES[mode]}`);
+  if (!res.ok) throw new Error(`${FILES[mode]}: ${res.status}. Run "make data" first.`);
+  return decodeNetwork((await res.json()) as WireNetwork);
 }
 
 /** All dates any service runs on, sorted, as YYYYMMDD. */
 export function availableDates(net: Network): string[] {
-  return [...new Set(net.services.flat())].sort();
+  const dates = new Set<string>();
+  for (const service of net.services) for (const d of service) dates.add(d);
+  return [...dates].sort();
 }

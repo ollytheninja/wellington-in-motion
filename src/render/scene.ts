@@ -5,7 +5,7 @@ import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { TripsLayer } from "@deck.gl/geo-layers";
 import type { Layer } from "@deck.gl/core";
 import type { Network } from "../types";
-import { FALLBACK_COLOUR, LINE_COLOURS, hexToRgb } from "../palette";
+import { BUS_COLOUR, FALLBACK_COLOUR, LINE_COLOURS, hexToRgb } from "../palette";
 import { positionAt, type SimTrip } from "../sim/sim";
 
 const CARTO_DARK = "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json";
@@ -49,7 +49,10 @@ export class Scene {
   private routeColours: Rgb[];
   private baseLines: { path: [number, number][]; colour: Rgb }[] = [];
   private stops: { pos: [number, number] }[];
-  private trips: SimTrip[] = [];
+  private railTrips: SimTrip[] = [];
+  private busTrips: SimTrip[] = [];
+  private showBuses = true;
+  private busColour = hexToRgb(BUS_COLOUR);
 
   constructor(container: HTMLElement, net: Network) {
     this.routeColours = net.routes.map((r) => hexToRgb(LINE_COLOURS[r.short] ?? FALLBACK_COLOUR));
@@ -76,17 +79,19 @@ export class Scene {
     this.map.setStyle(on ? CARTO_DARK : EMPTY_STYLE);
   }
 
-  setTrips(trips: SimTrip[]): void {
-    this.trips = trips;
+  setTrips(rail: SimTrip[], bus: SimTrip[]): void {
+    this.railTrips = rail;
+    this.busTrips = bus;
+  }
+
+  setShowBuses(on: boolean): void {
+    this.showBuses = on;
   }
 
   /** Draw the network at time `t`. `speed` is simulated seconds per real second and sets the trail length. */
-  draw(t: number, speed: number): number {
-    const dots: Dot[] = [];
-    for (const trip of this.trips) {
-      const pos = positionAt(trip, t);
-      if (pos) dots.push({ pos, colour: this.routeColours[trip.route]! });
-    }
+  draw(t: number, speed: number): { trains: number; buses: number } {
+    const trainDots = this.dotsAt(this.railTrips, t, (trip) => this.routeColours[trip.route]!);
+    const busDots = this.showBuses ? this.dotsAt(this.busTrips, t, () => this.busColour) : [];
     const trail = Math.min(900, Math.max(120, speed * 0.75));
 
     const layers: Layer[] = [
@@ -106,49 +111,69 @@ export class Scene {
         getRadius: 2.5,
         radiusUnits: "pixels",
       }),
-      new TripsLayer<SimTrip>({
-        id: "trails",
-        data: this.trips,
-        getPath: (d) => d.path,
-        getTimestamps: (d) => d.times,
-        getColor: (d) => this.routeColours[d.route]!,
-        currentTime: t,
-        trailLength: trail,
-        fadeTrail: true,
-        getWidth: 2.5,
-        widthUnits: "pixels",
-        capRounded: true,
-        jointRounded: true,
-        parameters: ADDITIVE,
-      }),
-      new ScatterplotLayer<Dot>({
-        id: "glow",
-        data: dots,
-        getPosition: (d) => d.pos,
-        getFillColor: (d) => rgba(d.colour, 45),
-        getRadius: 20,
-        radiusUnits: "pixels",
-        parameters: ADDITIVE,
-      }),
-      new ScatterplotLayer<Dot>({
-        id: "glow-inner",
-        data: dots,
-        getPosition: (d) => d.pos,
-        getFillColor: (d) => rgba(d.colour, 110),
-        getRadius: 9,
-        radiusUnits: "pixels",
-        parameters: ADDITIVE,
-      }),
-      new ScatterplotLayer<Dot>({
-        id: "core",
-        data: dots,
-        getPosition: (d) => d.pos,
-        getFillColor: [255, 255, 255, 255],
-        getRadius: 3.5,
-        radiusUnits: "pixels",
-      }),
+      // Buses first so trains draw on top of them.
+      ...(this.showBuses
+        ? [
+            this.trailLayer("bus-trails", this.busTrips, () => this.busColour, t, trail, 1.5),
+            ...this.dotLayers("bus", busDots, { glow: 10, inner: 5, core: 1.8 }),
+          ]
+        : []),
+      this.trailLayer("trails", this.railTrips, (trip) => this.routeColours[trip.route]!, t, trail, 2.5),
+      ...this.dotLayers("train", trainDots, { glow: 20, inner: 9, core: 3.5 }),
     ];
     this.overlay.setProps({ layers });
-    return dots.length;
+    return { trains: trainDots.length, buses: busDots.length };
+  }
+
+  private dotsAt(trips: SimTrip[], t: number, colourOf: (trip: SimTrip) => Rgb): Dot[] {
+    const dots: Dot[] = [];
+    for (const trip of trips) {
+      const pos = positionAt(trip, t);
+      if (pos) dots.push({ pos, colour: colourOf(trip) });
+    }
+    return dots;
+  }
+
+  private trailLayer(
+    id: string,
+    trips: SimTrip[],
+    colourOf: (trip: SimTrip) => Rgb,
+    t: number,
+    trailLength: number,
+    width: number,
+  ): Layer {
+    return new TripsLayer<SimTrip>({
+      id,
+      data: trips,
+      getPath: (d) => d.path,
+      getTimestamps: (d) => d.times,
+      getColor: (d) => colourOf(d),
+      currentTime: t,
+      trailLength,
+      fadeTrail: true,
+      getWidth: width,
+      widthUnits: "pixels",
+      capRounded: true,
+      jointRounded: true,
+      parameters: ADDITIVE,
+    });
+  }
+
+  private dotLayers(id: string, dots: Dot[], size: { glow: number; inner: number; core: number }): Layer[] {
+    const dot = (suffix: string, radius: number, fill: (d: Dot) => [number, number, number, number], additive: boolean) =>
+      new ScatterplotLayer<Dot>({
+        id: `${id}-${suffix}`,
+        data: dots,
+        getPosition: (d) => d.pos,
+        getFillColor: fill,
+        getRadius: radius,
+        radiusUnits: "pixels",
+        ...(additive ? { parameters: ADDITIVE } : {}),
+      });
+    return [
+      dot("glow", size.glow, (d) => rgba(d.colour, 45), true),
+      dot("inner", size.inner, (d) => rgba(d.colour, 110), true),
+      dot("core", size.core, () => [255, 255, 255, 255], false),
+    ];
   }
 }

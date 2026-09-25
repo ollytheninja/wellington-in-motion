@@ -15,14 +15,16 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 
 export interface Controls {
   /** Reflect the clock and train count in the UI. Call every frame. */
-  update(clock: Clock, running: number): void;
+  update(clock: Clock, counts: { trains: number; buses: number }): void;
+  /** Buses load after trains. Enables the Buses checkbox once they are in. */
+  busesReady(): void;
   /** Match the scrubber to the clock's window. Call after `clock.setRange`. */
   syncRange(clock: Clock): void;
 }
 
 export function setupControls(
   clock: Clock,
-  opts: { dates: string[]; date: string; onDate(date: string): void; onBasemap(on: boolean): void },
+  opts: { dates: string[]; date: string; onDate(date: string): void; onBasemap(on: boolean): void; onBuses(on: boolean): void },
 ): Controls {
   const play = $<HTMLButtonElement>("play");
   const scrub = $<HTMLInputElement>("scrub");
@@ -60,6 +62,10 @@ export function setupControls(
   window.addEventListener("pointerup", () => (dragging = false));
   scrub.addEventListener("input", () => clock.seek(+scrub.value));
 
+  const busBox = $<HTMLInputElement>("buses");
+  busBox.addEventListener("change", () => opts.onBuses(busBox.checked));
+  let busesLoaded = false;
+
   $<HTMLInputElement>("basemap").addEventListener("change", (e) => opts.onBasemap((e.target as HTMLInputElement).checked));
 
   syncPlay();
@@ -70,10 +76,16 @@ export function setupControls(
   syncRange(clock);
   return {
     syncRange,
-    update(c, running) {
+    busesReady() {
+      busesLoaded = true;
+      busBox.disabled = false;
+    },
+    update(c, counts) {
       clockEl.textContent = formatTime(c.t);
       if (!dragging) scrub.value = String(Math.round(c.t));
-      countEl.textContent = `${running} train${running === 1 ? "" : "s"} running`;
+      const trains = `${counts.trains} train${counts.trains === 1 ? "" : "s"}`;
+      const buses = !busesLoaded ? "loading buses" : busBox.checked ? `${counts.buses} bus${counts.buses === 1 ? "" : "es"}` : "";
+      countEl.textContent = buses ? `${trains} · ${buses}` : trains;
     },
   };
 }

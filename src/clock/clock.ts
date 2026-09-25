@@ -24,6 +24,14 @@ export class Clock {
     this.t = this.min + ((((t - this.min) % span) + span) % span);
   }
 
+  /** Change the window but keep the current time if it is still inside. */
+  setBounds(min: number, max: number): void {
+    this.min = min;
+    this.max = max;
+    this.t = Math.min(max, Math.max(min, this.t));
+  }
+
+  /** Change the window and go back to its start. */
   setRange(min: number, max: number): void {
     this.min = min;
     this.max = max;

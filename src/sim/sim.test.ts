@@ -20,7 +20,7 @@ const net: Network = {
 
 describe("sim", () => {
   it("interpolates between stops and dwells at a stop", () => {
-    const trip = buildTrip(net, net.trips[0]!, 0);
+    const trip = buildTrip(net, net.trips[0]!, 0, "rail");
     expect(positionAt(trip, 35999)).toBeNull();
     expect(positionAt(trip, 36300)![0]).toBeCloseTo(0.5);
     expect(positionAt(trip, 36650)![0]).toBeCloseTo(1);
@@ -29,19 +29,19 @@ describe("sim", () => {
   });
 
   it("times are non-decreasing", () => {
-    const { times } = buildTrip(net, net.trips[0]!, 0);
+    const { times } = buildTrip(net, net.trips[0]!, 0, "rail");
     for (let i = 1; i < times.length; i++) expect(times[i]!).toBeGreaterThanOrEqual(times[i - 1]!);
   });
 
   it("day window runs from the first train to the last, with the end rounded up to 15 minutes", () => {
-    const day = buildDay(net, "20260925");
+    const day = buildDay(net, "20260925", "rail");
     expect(day.trips).toHaveLength(1);
     expect(day.start).toBe(36000); // 10:00, the first departure
     expect(day.end).toBe(37800); // 10:30, the 10:22 arrival rounded up
   });
 
   it("trips past midnight stay in the day they started", () => {
-    const day = buildDay(net, "20260924");
+    const day = buildDay(net, "20260924", "rail");
     expect(day.start).toBe(85500); // 23:45, the 23:50 departure rounded down
     expect(day.end).toBe(88200);
   });

@@ -21,10 +21,14 @@ End state: the same thing for buses, driven by recorded real-time data as well a
 - Extract from LINZ Data Service: coastline and water polygons, main roads, rail. Build vector tiles into a single PMTiles file. Style them ourselves.
 - Drop the third-party basemap.
 
-### Phase 3: buses
+### Phase 3: buses (done, first pass)
 
-- Same pipeline, much more data. About two orders of magnitude more trips than trains.
-- Needs the packed binary format and GPU-side animation described below.
+- Same pipeline and renderer. Route types 3 (bus) and 712 (school bus) go to `public/data/buses.json`, rail to `network.json`.
+- 16,572 bus trips in the feed against 1,168 rail. A weekday has about 4,500 buses running.
+- Wire format is packed (`src/data/wire.ts`): shapes are delta-encoded integers, control points are delta-encoded, service days are bit strings. Shapes are simplified to 3 m. `buses.json` is about 6.5 MiB, about 1.8 MB gzipped.
+- Buses load after trains, so trains are moving straight away. All buses share one colour and are drawn under the trains.
+- Stops are placed on shapes with a least-total-offset search, not greedy nearest point. Greedy put 3.5% of bus stops more than 30 m off their road, some by kilometres. See `pipeline/project.ts`.
+- Not done: ferries (route type 4) and the cable car (5).
 
 ### Phase 4: real data
 

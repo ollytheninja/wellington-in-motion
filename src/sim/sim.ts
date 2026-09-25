@@ -1,9 +1,11 @@
+import type { Mode } from "../data/load";
 import type { Network, TripRecord } from "../types";
 
 export const DAY = 86400;
 
 /** A trip ready to draw. Times are seconds from midnight of the day being shown, and can be negative. */
 export interface SimTrip {
+  mode: Mode;
   route: number;
   headsign: string;
   path: [number, number][];
@@ -25,17 +27,21 @@ const ROUND = 900;
  * train and ends at the last, so the timeline has no dead hours. Trips after midnight
  * belong to the day they started on.
  */
-export function buildDay(net: Network, date: string): Day {
+export function buildDay(net: Network, date: string, mode: Mode): Day {
   const running = new Set<number>();
   net.services.forEach((dates, i) => dates.includes(date) && running.add(i));
-  const trips = net.trips.filter((t) => running.has(t.service)).map((t) => buildTrip(net, t, 0));
+  const trips = net.trips.filter((t) => running.has(t.service)).map((t) => buildTrip(net, t, 0, mode));
   if (trips.length === 0) return { trips, start: 0, end: DAY };
-  const start = Math.min(...trips.map((t) => t.times[0]!));
-  const end = Math.max(...trips.map((t) => t.times[t.times.length - 1]!));
+  let start = Infinity;
+  let end = -Infinity;
+  for (const t of trips) {
+    start = Math.min(start, t.times[0]!);
+    end = Math.max(end, t.times[t.times.length - 1]!);
+  }
   return { trips, start: Math.floor(start / ROUND) * ROUND, end: Math.ceil(end / ROUND) * ROUND };
 }
 
-export function buildTrip(net: Network, trip: TripRecord, offset: number): SimTrip {
+export function buildTrip(net: Network, trip: TripRecord, offset: number, mode: Mode): SimTrip {
   const shape = net.shapes[trip.shape]!;
   const cp = trip.cp;
   const n = cp.length / 2;
@@ -60,6 +66,7 @@ export function buildTrip(net: Network, trip: TripRecord, offset: number): SimTr
   pts.sort((a, b) => a.d - b.d || a.t - b.t);
 
   return {
+    mode,
     route: trip.route,
     headsign: trip.headsign,
     path: pts.map((p) => coordAt(shape, p.d)),

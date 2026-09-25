@@ -2,7 +2,8 @@ import "./style.css";
 import { Clock } from "./clock/clock";
 import { availableDates, loadNetwork } from "./data/load";
 import { Scene } from "./render/scene";
-import { buildDay } from "./sim/sim";
+import { buildDay, type Day } from "./sim/sim";
+import type { Network } from "./types";
 import { DEFAULT_SPEED, setupControls, type Controls } from "./ui/controls";
 
 function aucklandNow(): { date: string; seconds: number } {
@@ -23,37 +24,62 @@ function aucklandNow(): { date: string; seconds: number } {
 }
 
 async function main() {
-  const net = await loadNetwork();
-  const dates = availableDates(net);
+  const rail = await loadNetwork("rail");
+  const dates = availableDates(rail);
   const now = aucklandNow();
 
   // Default to today if the feed covers it, otherwise the nearest date it does.
-  const date = dates.includes(now.date) ? now.date : now.date < dates[0]! ? dates[0]! : dates[dates.length - 1]!;
-  const day = buildDay(net, date);
-  const inWindow = date === now.date && now.seconds >= day.start && now.seconds <= day.end;
-  const clock = new Clock(inWindow ? now.seconds : day.start, DEFAULT_SPEED, day.start, day.end);
+  let date = dates.includes(now.date) ? now.date : now.date < dates[0]! ? dates[0]! : dates[dates.length - 1]!;
+  let bus: Network | null = null;
+  let railDay = buildDay(rail, date, "rail");
+  let busDay: Day | null = null;
 
-  const scene = new Scene(document.getElementById("map")!, net);
-  scene.setTrips(day.trips);
+  /** The play window covers every mode that is loaded. */
+  const playWindow = () => {
+    const days = busDay ? [railDay, busDay] : [railDay];
+    return { min: Math.min(...days.map((d) => d.start)), max: Math.max(...days.map((d) => d.end)) };
+  };
+
+  const w = playWindow();
+  const inWindow = date === now.date && now.seconds >= w.min && now.seconds <= w.max;
+  const clock = new Clock(inWindow ? now.seconds : w.min, DEFAULT_SPEED, w.min, w.max);
+
+  const scene = new Scene(document.getElementById("map")!, rail);
+  scene.setTrips(railDay.trips, []);
 
   const controls: Controls = setupControls(clock, {
     dates,
     date,
     onDate: (d) => {
-      const next = buildDay(net, d);
-      scene.setTrips(next.trips);
-      clock.setRange(next.start, next.end);
+      date = d;
+      railDay = buildDay(rail, date, "rail");
+      busDay = bus ? buildDay(bus, date, "bus") : null;
+      scene.setTrips(railDay.trips, busDay?.trips ?? []);
+      const next = playWindow();
+      clock.setRange(next.min, next.max);
       controls.syncRange(clock);
     },
     onBasemap: (on) => scene.setBasemap(on),
+    onBuses: (on) => scene.setShowBuses(on),
+  });
+
+  // Buses are most of the data, so they load after trains are already moving.
+  void loadNetwork("bus").then((net) => {
+    bus = net;
+    busDay = buildDay(net, date, "bus");
+    scene.setTrips(railDay.trips, busDay.trips);
+    const next = playWindow();
+    clock.setBounds(next.min, next.max);
+    controls.syncRange(clock);
+    controls.busesReady();
   });
 
   let last = performance.now();
   const frame = (nowMs: number) => {
     clock.tick(nowMs - last);
     last = nowMs;
-    const running = scene.draw(clock.t, clock.playing ? clock.speed : 300);
-    controls.update(clock, running);
+    const counts = scene.draw(clock.t, clock.playing ? clock.speed : 300);
+    controls.update(clock, counts);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
