@@ -12,7 +12,7 @@ Docs:
 ## Run it
 
 ```
-# put the Metlink GTFS files in ./gtfs (see docs/architecture.md), then:
+make refresh      # download the latest Metlink GTFS into ./gtfs and build the data
 make dev          # installs, builds the data if needed, serves http://localhost:5173
 make test
 make build        # static site in ./dist
