@@ -2,6 +2,7 @@ import type { Credit } from "../data/load";
 
 const REPO_URL = "https://github.com/ollytheninja/trains";
 const METLINK_URL = "https://www.metlink.org.nz/legal/general-transit-feed-specification";
+const STORAGE_KEY = "credits-collapsed";
 const CC_BY_URL = "https://creativecommons.org/licenses/by/4.0/";
 
 const link = (text: string, href: string) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
@@ -9,11 +10,12 @@ const link = (text: string, href: string) => `<a href="${href}" target="_blank" 
 /**
  * Fills the credits box. Timetables and the hillshade are fixed. The coastline credit comes
  * from the data file, so the words CC BY 4.0 asks for stay with the data. The hillshade is
- * only credited when it is actually drawn, which needs its API key.
+ * only credited when it is actually drawn, which needs its API key. The box collapses to an
+ * "i" button and remembers that choice.
  */
 export function renderCredits(el: HTMLElement, coastline: Credit | null): void {
   const rows: string[] = [
-    `<p><b>Timetables</b> ${link("Metlink General Transit Feed Specification", METLINK_URL)}, Greater Wellington Regional Council. Vehicles are placed from the timetable, not tracked live.</p>`,
+    `<p><b>Timetables</b> ${link("Metlink General Transit Feed Specification", METLINK_URL)}, Greater Wellington Regional Council. Vehicles are placed from the timetable.</p>`,
   ];
   if (import.meta.env.VITE_LINZ_BASEMAPS_KEY) {
     rows.push(`<p><b>Hillshade</b> ${link("Sourced from LINZ", "https://basemaps.linz.govt.nz/")}, ${link("CC BY 4.0", CC_BY_URL)}.</p>`);
@@ -24,5 +26,29 @@ export function renderCredits(el: HTMLElement, coastline: Credit | null): void {
     );
   }
   rows.push(`<p><b>Source code</b> ${link("github.com/ollytheninja/trains", REPO_URL)}</p>`);
-  el.innerHTML = `<h2>Credits</h2>${rows.join("")}`;
+  el.innerHTML =
+    `<button type="button" id="credits-toggle" aria-controls="credits-body"></button>` +
+    `<div id="credits-body"><h2>Credits</h2>${rows.join("")}</div>`;
+
+  const toggle = el.querySelector<HTMLButtonElement>("#credits-toggle")!;
+  const setCollapsed = (collapsed: boolean) => {
+    el.classList.toggle("collapsed", collapsed);
+    toggle.textContent = collapsed ? "i" : "\u00d7";
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    toggle.setAttribute("aria-label", collapsed ? "Show credits" : "Hide credits");
+    try {
+      localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
+    } catch {
+      // Private browsing can refuse storage. The box still works, it just will not remember.
+    }
+  };
+  toggle.addEventListener("click", () => setCollapsed(!el.classList.contains("collapsed")));
+
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(STORAGE_KEY);
+  } catch {
+    // See above.
+  }
+  setCollapsed(saved === "1");
 }
