@@ -25,7 +25,7 @@ export interface Controls {
 
 export function setupControls(
   clock: Clock,
-  opts: { dates: string[]; date: string; onDate(date: string): void; onBasemap(on: boolean): void; onBuses(on: boolean): void },
+  opts: { dates: string[]; date: string; onDate(date: string): void; onBasemap(on: boolean): void; onBuses(on: boolean): void; basemapAvailable: boolean },
 ): Controls {
   const play = $<HTMLButtonElement>("play");
   const scrub = $<HTMLInputElement>("scrub");
@@ -67,7 +67,13 @@ export function setupControls(
   busBox.addEventListener("change", () => opts.onBuses(busBox.checked));
   let busesLoaded = false;
 
-  $<HTMLInputElement>("basemap").addEventListener("change", (e) => opts.onBasemap((e.target as HTMLInputElement).checked));
+  const baseBox = $<HTMLInputElement>("basemap");
+  baseBox.addEventListener("change", () => opts.onBasemap(baseBox.checked));
+  if (!opts.basemapAvailable) {
+    baseBox.checked = false;
+    baseBox.disabled = true;
+    baseBox.parentElement!.title = "Set VITE_LINZ_BASEMAPS_KEY in .env to enable the hillshade";
+  }
 
   syncPlay();
   const syncRange = (c: Clock) => {

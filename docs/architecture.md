@@ -134,9 +134,11 @@ Alternative considered: a hand-written canvas or WebGL renderer. It gives full c
 
 ## Basemap decision
 
-For the MVP, use a free dark raster or vector basemap, or none at all. With none, the coastline and rail lines alone probably look good, because the Gource style depends on emptiness. Start there and see. Avoid anything needing an API key so the app stays static.
+The basemap is the LINZ hillshade of the New Zealand surface model, drawn as a MapLibre raster layer. The tiles show sea as the lightest colour and land shaded darker, so we invert their brightness: sea goes near black, land becomes a dim textured grey, and the glowing network stands out. That keeps the Gource look while showing the geography.
 
-LINZ basemaps are an option, but they are not styled for dark mode and their terms need checking. The phase 2 extract from the LINZ Data Service gives us full control over what is drawn.
+The LINZ coastline (`coastline.json`) is drawn on top as a thin line. It is our own data, so it stays when the basemap is switched off.
+
+CARTO dark matter was tried first and dropped: its tiles did not render for us, and its land and water were too close in tone to show the coast.
 
 ## Repo layout
 

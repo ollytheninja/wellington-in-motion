@@ -9,13 +9,37 @@ import type { Network } from "../types";
 import { BUS_COLOUR, FALLBACK_COLOUR, FERRY_COLOUR, LINE_COLOURS, hexToRgb } from "../palette";
 import { positionAt, type SimTrip } from "../sim/sim";
 
-const CARTO_DARK = "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json";
+const HILLSHADE_KEY = import.meta.env.VITE_LINZ_BASEMAPS_KEY as string | undefined;
+
+/** Hillshade of the New Zealand surface model. Sea is transparent, so it stays as dark as the background. */
+const HILLSHADE_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    hillshade: {
+      type: "raster",
+      tiles: [`https://basemaps.linz.govt.nz/v1/tiles/hillshade-igor-dsm/WebMercatorQuad/{z}/{x}/{y}.webp?api=${HILLSHADE_KEY}`],
+      tileSize: 256,
+      attribution:
+        'Hillshade: <a href="https://basemaps.linz.govt.nz/" target="_blank" rel="noopener">Sourced from LINZ</a>, ' +
+        '<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>',
+    },
+  },
+  layers: [
+    { id: "bg", type: "background", paint: { "background-color": "#05070d" } },
+    // Sea is the lightest thing in the tiles and land is shaded darker. Flip that, so the sea is near black, land is a dim grey and the network still glows.
+    { id: "hillshade", type: "raster", source: "hillshade", paint: { "raster-brightness-min": 0.3, "raster-brightness-max": 0.03 } },
+  ],
+};
 
 const EMPTY_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {},
   layers: [{ id: "bg", type: "background", paint: { "background-color": "#05070d" } }],
 };
+
+/** No key means no hillshade, so the map is just the dark background. */
+export const HAS_BASEMAP = Boolean(HILLSHADE_KEY);
+const startStyle = () => (HAS_BASEMAP ? HILLSHADE_STYLE : EMPTY_STYLE);
 
 /** Adds up brightness where things overlap. This is what makes busy corridors glow. */
 const ADDITIVE = {
@@ -99,7 +123,7 @@ export class Scene {
 
     this.map = new maplibregl.Map({
       container,
-      style: CARTO_DARK,
+      style: startStyle(),
       bounds: bounds(base.map((b) => b.net)),
       fitBoundsOptions: { padding: { top: 60, bottom: 120, left: 60, right: 60 } },
       attributionControl: { compact: true, customAttribution: coastline ? [coastline.attribution] : [] },
@@ -109,7 +133,7 @@ export class Scene {
   }
 
   setBasemap(on: boolean): void {
-    this.map.setStyle(on ? CARTO_DARK : EMPTY_STYLE);
+    this.map.setStyle(on && HAS_BASEMAP ? HILLSHADE_STYLE : EMPTY_STYLE);
   }
 
   /** Draw every bus route as a dark grey line. Buses load after the rest, so this is separate from the constructor. */

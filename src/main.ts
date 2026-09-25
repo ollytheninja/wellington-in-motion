@@ -1,7 +1,7 @@
 import "./style.css";
 import { Clock } from "./clock/clock";
 import { availableDates, loadCoastline, loadNetwork, type Mode } from "./data/load";
-import { Scene } from "./render/scene";
+import { HAS_BASEMAP, Scene } from "./render/scene";
 import { buildDay, type Day } from "./sim/sim";
 import type { Network } from "./types";
 import { DEFAULT_SPEED, setupControls, type Controls } from "./ui/controls";
@@ -72,6 +72,7 @@ async function main() {
       controls.syncRange(clock);
     },
     onBasemap: (on) => scene.setBasemap(on),
+    basemapAvailable: HAS_BASEMAP,
     onBuses: (on) => scene.setVisible("bus", on),
   });
 
