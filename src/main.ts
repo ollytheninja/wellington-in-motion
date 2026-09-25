@@ -59,6 +59,12 @@ async function main() {
     return { min: Math.min(...running.map((d) => d.start)), max: Math.max(...running.map((d) => d.end)) };
   };
 
+  const peaks = () => ({
+    rail: days.rail?.peak ?? null,
+    ferry: days.ferry?.peak ?? null,
+    bus: days.bus?.peak ?? null,
+  });
+
   rebuild();
   const w = playWindow();
   const inWindow = date === now.date && now.seconds >= w.min && now.seconds <= w.max;
@@ -70,12 +76,15 @@ async function main() {
     onDate: (d) => {
       date = d;
       rebuild();
+      controls.setPeaks(peaks());
       const next = playWindow();
       clock.setRange(next.min, next.max);
       controls.syncRange(clock);
     },
     onBuses: (on) => scene.setVisible("bus", on),
   });
+
+  controls.setPeaks(peaks());
 
   // Buses are most of the data, so they load after trains are already moving.
   void loadNetwork("bus").then((net) => {
@@ -85,6 +94,7 @@ async function main() {
     const next = playWindow();
     clock.setBounds(next.min, next.max);
     controls.syncRange(clock);
+    controls.setPeaks(peaks());
     controls.busesReady();
   });
 

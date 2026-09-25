@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Network } from "../types";
 import { Clock } from "../clock/clock";
-import { buildDay, buildTrip, positionAt } from "./sim";
+import { buildDay, buildTrip, peakConcurrent, positionAt } from "./sim";
 
 // One straight shape along the equator, 3 vertices, 0 / 1000 / 2000 m.
 const net: Network = {
@@ -26,6 +26,13 @@ describe("sim", () => {
     expect(positionAt(trip, 36650)![0]).toBeCloseTo(1);
     expect(positionAt(trip, 37020)![0]).toBeCloseTo(1.5);
     expect(positionAt(trip, 37321)).toBeNull();
+  });
+
+  it("peak concurrency counts trips that touch at an instant as overlapping", () => {
+    const at = (a: number, b: number) => buildTrip(net, { route: 0, shape: 0, service: 0, headsign: "", cp: [a, 0, b, 2000] }, 0, "rail");
+    expect(peakConcurrent([at(0, 100), at(100, 200), at(300, 400)])).toBe(2);
+    expect(peakConcurrent([at(0, 100), at(150, 200)])).toBe(1);
+    expect(peakConcurrent([])).toBe(0);
   });
 
   it("times are non-decreasing", () => {

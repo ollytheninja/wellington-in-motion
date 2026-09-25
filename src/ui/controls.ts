@@ -1,6 +1,7 @@
 import type { Clock } from "../clock/clock";
 import { formatTime } from "../clock/clock";
 import { autoHide } from "./autohide";
+import type { Mode } from "../data/load";
 import type { Counts } from "../render/scene";
 
 export const SPEEDS = [
@@ -25,6 +26,8 @@ export function formatDuration(seconds: number): string {
 export interface Controls {
   /** Reflect the clock and train count in the UI. Call every frame. */
   update(clock: Clock, counts: Counts): void;
+  /** The most vehicles at once today for each mode, which is what a full bar means. Null while a mode is still loading. */
+  setPeaks(peaks: Record<Mode, number | null>): void;
   /** Buses load after trains. Enables the Buses checkbox once they are in. */
   busesReady(): void;
   /** Match the scrubber to the clock's window. Call after `clock.setRange`. */
@@ -40,7 +43,14 @@ export function setupControls(
   const speed = $<HTMLSelectElement>("speed");
   const dateInput = $<HTMLInputElement>("date");
   const clockEl = $("clock");
-  const countEl = $("count");
+  const meters = Object.fromEntries(
+    (["rail", "ferry", "bus"] as const).map((mode) => {
+      const row = document.querySelector<HTMLElement>(`.meter[data-mode="${mode}"]`)!;
+      return [mode, { row, fill: row.querySelector<HTMLElement>("i")!, num: row.querySelector<HTMLElement>(".n")! }];
+    }),
+  ) as Record<Mode, { row: HTMLElement; fill: HTMLElement; num: HTMLElement }>;
+  const peaks: Record<Mode, number | null> = { rail: null, ferry: null, bus: null };
+  const shown: Record<Mode, string> = { rail: "", ferry: "", bus: "" };
 
   const iso = (d: string) => `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
   dateInput.min = iso(opts.dates[0]!);
@@ -94,14 +104,26 @@ export function setupControls(
       busesLoaded = true;
       busBox.disabled = false;
     },
+    setPeaks(next) {
+      Object.assign(peaks, next);
+    },
     update(c, counts) {
       clockEl.textContent = formatTime(c.t);
       if (!dragging) scrub.value = String(Math.round(c.t));
-      const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-      const parts = [plural(counts.rail, "train", "trains"), plural(counts.ferry, "ferry", "ferries")];
-      if (!busesLoaded) parts.push("loading buses");
-      else if (busBox.checked) parts.push(plural(counts.bus, "bus", "buses"));
-      countEl.textContent = parts.join(" · ");
+      for (const mode of ["rail", "ferry", "bus"] as const) {
+        const m = meters[mode];
+        const peak = peaks[mode];
+        const off = mode === "bus" && busesLoaded && !busBox.checked;
+        const text = peak === null ? "\u2026" : String(counts[mode]);
+        const width = peak ? `${Math.min(100, (counts[mode] / peak) * 100).toFixed(1)}%` : "0%";
+        // Only touch the DOM when something changed. This runs every frame.
+        if (shown[mode] !== `${text}|${width}|${off}`) {
+          shown[mode] = `${text}|${width}|${off}`;
+          m.num.textContent = text;
+          m.fill.style.width = width;
+          m.row.classList.toggle("off", off);
+        }
+      }
     },
   };
 }

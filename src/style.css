@@ -4,7 +4,17 @@ html, body { margin: 0; height: 100%; background: #05070d; color: #cfd8e8; font-
 #hud #date-line { pointer-events: auto; }
 #title { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.6; }
 #clock { font-size: 64px; font-weight: 200; font-variant-numeric: tabular-nums; line-height: 1.1; color: #fff; }
-#count { font-size: 13px; opacity: 0.6; margin-top: 4px; }
+#date { width: 142px; box-sizing: border-box; }
+#meters { margin-top: 10px; display: grid; gap: 7px; font-size: 12px; }
+.meter { display: flex; align-items: center; gap: 8px; }
+.meter .bar { width: 142px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; flex: none; }
+.meter .bar i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--meter, #e8edf7); box-shadow: 0 0 8px var(--meter, #e8edf7); }
+.meter[data-mode="rail"] { --meter: #e8edf7; }
+.meter[data-mode="ferry"] { --meter: #19e6d2; }
+.meter[data-mode="bus"] { --meter: #b48cff; }
+.meter .n { min-width: 3ch; text-align: right; color: #fff; font-variant-numeric: tabular-nums; }
+.meter .what { opacity: 0.6; }
+.meter.off { opacity: 0.35; }
 #controls {
   position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
   width: min(880px, calc(100vw - 48px)); display: flex; align-items: center; gap: 14px;

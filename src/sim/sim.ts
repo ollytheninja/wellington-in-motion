@@ -18,6 +18,8 @@ export interface Day {
   /** Seconds from midnight. `end` can be past 86400 for services that run after midnight. */
   start: number;
   end: number;
+  /** The most vehicles running at once during the day. */
+  peak: number;
 }
 
 const ROUND = 900;
@@ -31,14 +33,28 @@ export function buildDay(net: Network, date: string, mode: Mode): Day {
   const running = new Set<number>();
   net.services.forEach((dates, i) => dates.includes(date) && running.add(i));
   const trips = net.trips.filter((t) => running.has(t.service)).map((t) => buildTrip(net, t, 0, mode));
-  if (trips.length === 0) return { trips, start: 0, end: DAY };
+  if (trips.length === 0) return { trips, start: 0, end: DAY, peak: 0 };
   let start = Infinity;
   let end = -Infinity;
   for (const t of trips) {
     start = Math.min(start, t.times[0]!);
     end = Math.max(end, t.times[t.times.length - 1]!);
   }
-  return { trips, start: Math.floor(start / ROUND) * ROUND, end: Math.ceil(end / ROUND) * ROUND };
+  return { trips, start: Math.floor(start / ROUND) * ROUND, end: Math.ceil(end / ROUND) * ROUND, peak: peakConcurrent(trips) };
+}
+
+/** The most trips running at once. A trip counts from its first time to its last, both included, as `positionAt` does. */
+export function peakConcurrent(trips: SimTrip[]): number {
+  const events: [number, number][] = [];
+  for (const t of trips) events.push([t.times[0]!, 1], [t.times[t.times.length - 1]!, -1]);
+  events.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+  let running = 0;
+  let peak = 0;
+  for (const [, delta] of events) {
+    running += delta;
+    peak = Math.max(peak, running);
+  }
+  return peak;
 }
 
 export function buildTrip(net: Network, trip: TripRecord, offset: number, mode: Mode): SimTrip {
