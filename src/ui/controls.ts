@@ -1,5 +1,6 @@
 import type { Clock } from "../clock/clock";
 import { formatTime } from "../clock/clock";
+import type { Counts } from "../render/scene";
 
 export const SPEEDS = [
   { label: "1x", value: 1 },
@@ -15,7 +16,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 
 export interface Controls {
   /** Reflect the clock and train count in the UI. Call every frame. */
-  update(clock: Clock, counts: { trains: number; buses: number }): void;
+  update(clock: Clock, counts: Counts): void;
   /** Buses load after trains. Enables the Buses checkbox once they are in. */
   busesReady(): void;
   /** Match the scrubber to the clock's window. Call after `clock.setRange`. */
@@ -83,9 +84,11 @@ export function setupControls(
     update(c, counts) {
       clockEl.textContent = formatTime(c.t);
       if (!dragging) scrub.value = String(Math.round(c.t));
-      const trains = `${counts.trains} train${counts.trains === 1 ? "" : "s"}`;
-      const buses = !busesLoaded ? "loading buses" : busBox.checked ? `${counts.buses} bus${counts.buses === 1 ? "" : "es"}` : "";
-      countEl.textContent = buses ? `${trains} · ${buses}` : trains;
+      const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+      const parts = [plural(counts.rail, "train", "trains"), plural(counts.ferry, "ferry", "ferries")];
+      if (!busesLoaded) parts.push("loading buses");
+      else if (busBox.checked) parts.push(plural(counts.bus, "bus", "buses"));
+      countEl.textContent = parts.join(" · ");
     },
   };
 }

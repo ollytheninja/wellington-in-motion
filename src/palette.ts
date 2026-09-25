@@ -10,6 +10,8 @@ export const LINE_COLOURS: Record<string, string> = {
 /** Every bus is the same colour. 200-odd routes would be noise, and violet is clear of the rail colours. */
 export const BUS_COLOUR = "#b48cff";
 
+export const FERRY_COLOUR = "#19e6d2";
+
 export const FALLBACK_COLOUR = "#ffffff";
 
 export function hexToRgb(hex: string): [number, number, number] {

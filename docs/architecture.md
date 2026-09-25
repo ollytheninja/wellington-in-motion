@@ -28,7 +28,7 @@ End state: the same thing for buses, driven by recorded real-time data as well a
 - Wire format is packed (`src/data/wire.ts`): shapes are delta-encoded integers, control points are delta-encoded, service days are bit strings. Shapes are simplified to 3 m. `buses.json` is about 6.5 MiB, about 1.8 MB gzipped.
 - Buses load after trains, so trains are moving straight away. All buses share one colour and are drawn under the trains.
 - Stops are placed on shapes with a least-total-offset search, not greedy nearest point. Greedy put 3.5% of bus stops more than 30 m off their road, some by kilometres. See `pipeline/project.ts`.
-- Not done: ferries (route type 4) and the cable car (5).
+- Ferries (route type 4, the Days Bay and Mātiu/Somes Island service, 76 trips) are in `ferry.json` and load with trains. The cable car (5) is left out on purpose.
 
 ### Phase 4: real data
 

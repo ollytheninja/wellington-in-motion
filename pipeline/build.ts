@@ -1,6 +1,6 @@
 /**
- * Turns the Metlink GTFS feed in ./gtfs into public/data/network.json (rail) and
- * public/data/buses.json. Run with `make data`.
+ * Turns the Metlink GTFS feed in ./gtfs into public/data/network.json (rail),
+ * ferry.json and buses.json. Run with `make data`.
  */
 import { createReadStream, mkdirSync, writeFileSync } from "node:fs";
 import { parse } from "csv-parse";
@@ -18,13 +18,14 @@ interface ModeConfig {
   routeTypes: string[];
   /** Shapes are simplified to this tolerance in metres. */
   toleranceM: number;
-  /** Bus stops are too many to draw, so only rail ships them. */
+  /** Bus stops are too many to draw, so buses skip them. */
   includeStops: boolean;
 }
 
-// Route types: 2 rail, 3 bus, 712 school bus. Ferry (4) and cable car (5) are not included yet.
+// Route types: 2 rail, 3 bus, 712 school bus, 4 ferry. The cable car (5) is deliberately left out.
 const MODES: ModeConfig[] = [
   { name: "rail", file: "network.json", routeTypes: ["2"], toleranceM: 1, includeStops: true },
+  { name: "ferry", file: "ferry.json", routeTypes: ["4"], toleranceM: 1, includeStops: true },
   { name: "bus", file: "buses.json", routeTypes: ["3", "712"], toleranceM: 3, includeStops: false },
 ];
 

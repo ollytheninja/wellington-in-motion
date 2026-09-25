@@ -1,9 +1,9 @@
 import type { Network, WireNetwork } from "../types";
 import { decodeNetwork } from "./wire";
 
-export type Mode = "rail" | "bus";
+export type Mode = "rail" | "ferry" | "bus";
 
-const FILES: Record<Mode, string> = { rail: "network.json", bus: "buses.json" };
+const FILES: Record<Mode, string> = { rail: "network.json", ferry: "ferry.json", bus: "buses.json" };
 
 export async function loadNetwork(mode: Mode): Promise<Network> {
   const res = await fetch(`${import.meta.env.BASE_URL}data/${FILES[mode]}`);
