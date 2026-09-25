@@ -65,9 +65,42 @@ function bounds(nets: Network[]): [[number, number], [number, number]] {
   return [[w, s], [e, n]];
 }
 
-interface Dot {
-  pos: [number, number];
-  colour: Rgb;
+/**
+ * Trips grouped by start time. Only a few chunks run at any moment, so the rest are hidden and
+ * cost nothing to draw. Their data never changes, so hiding one does not re-upload it. Without
+ * this the bus trail layer pushes about a million vertices through the GPU every frame, and
+ * about 7% of them belong to buses that are running.
+ */
+interface Chunk {
+  trips: SimTrip[];
+  /** Earliest first time and latest last time of any trip in the chunk. */
+  start: number;
+  end: number;
+}
+
+const CHUNK_SIZE = 250;
+
+function chunkTrips(trips: SimTrip[]): Chunk[] {
+  const sorted = [...trips].sort((a, b) => a.times[0]! - b.times[0]!);
+  const chunks: Chunk[] = [];
+  for (let i = 0; i < sorted.length; i += CHUNK_SIZE) {
+    const group = sorted.slice(i, i + CHUNK_SIZE);
+    let start = Infinity;
+    let end = -Infinity;
+    for (const trip of group) {
+      start = Math.min(start, trip.times[0]!);
+      end = Math.max(end, trip.times[trip.times.length - 1]!);
+    }
+    chunks.push({ trips: group, start, end });
+  }
+  return chunks;
+}
+
+/** Dots for one mode, as flat arrays so deck.gl can upload them without calling an accessor per dot. */
+interface Dots {
+  count: number;
+  positions: Float64Array;
+  colours: Uint8Array;
 }
 
 interface Style {
@@ -96,7 +129,7 @@ export class Scene {
   private coastLines: { path: [number, number][] }[];
   private busLines: { path: [number, number][] }[] = [];
   private stops: { pos: [number, number] }[] = [];
-  private trips: Record<Mode, SimTrip[]> = { rail: [], ferry: [], bus: [] };
+  private chunks: Record<Mode, Chunk[]> = { rail: [], ferry: [], bus: [] };
   private visible: Record<Mode, boolean> = { rail: true, ferry: true, bus: true };
   private fixedColour: Record<"ferry" | "bus", Rgb> = { ferry: hexToRgb(FERRY_COLOUR), bus: hexToRgb(BUS_COLOUR) };
 
@@ -124,7 +157,8 @@ export class Scene {
       fitBoundsOptions: { padding: { top: 60, bottom: 120, left: 60, right: 60 } },
       attributionControl: false,
     });
-    this.overlay = new MapboxOverlay({ interleaved: false, layers: [] });
+    // Deck draws to its own canvas. Capping the pixel ratio cuts the pixels it fills on high-density screens.
+    this.overlay = new MapboxOverlay({ interleaved: false, layers: [], useDevicePixels: Math.min(window.devicePixelRatio || 1, 1.5) });
     this.map.addControl(this.overlay as unknown as maplibregl.IControl);
   }
 
@@ -134,7 +168,7 @@ export class Scene {
   }
 
   setTrips(mode: Mode, trips: SimTrip[]): void {
-    this.trips[mode] = trips;
+    this.chunks[mode] = chunkTrips(trips);
   }
 
   setVisible(mode: Mode, on: boolean): void {
@@ -190,56 +224,79 @@ export class Scene {
     for (const mode of DRAW_ORDER) {
       if (!this.visible[mode]) continue;
       const style = STYLES[mode];
-      const dots = this.dotsAt(this.trips[mode], t);
-      counts[mode] = dots.length;
-      layers.push(this.trailLayer(mode, t, trail, style.trailWidth), ...this.dotLayers(mode, dots, style));
+      const dots = this.dotsAt(this.chunks[mode], t);
+      counts[mode] = dots.count;
+      layers.push(...this.trailLayers(mode, t, trail, style.trailWidth), ...this.dotLayers(mode, dots, style));
     }
     this.overlay.setProps({ layers });
     return counts;
   }
 
-  private dotsAt(trips: SimTrip[], t: number): Dot[] {
-    const dots: Dot[] = [];
-    for (const trip of trips) {
-      const pos = positionAt(trip, t);
-      if (pos) dots.push({ pos, colour: this.colourOf(trip) });
+  private dotsAt(chunks: Chunk[], t: number): Dots {
+    let capacity = 0;
+    for (const chunk of chunks) if (t >= chunk.start && t <= chunk.end) capacity += chunk.trips.length;
+    const positions = new Float64Array(capacity * 2);
+    const colours = new Uint8Array(capacity * 4);
+    let n = 0;
+    for (const chunk of chunks) {
+      if (t < chunk.start || t > chunk.end) continue;
+      for (const trip of chunk.trips) {
+        const pos = positionAt(trip, t);
+        if (!pos) continue;
+        const colour = this.colourOf(trip);
+        positions[n * 2] = pos[0];
+        positions[n * 2 + 1] = pos[1];
+        colours[n * 4] = colour[0];
+        colours[n * 4 + 1] = colour[1];
+        colours[n * 4 + 2] = colour[2];
+        colours[n * 4 + 3] = 255;
+        n++;
+      }
     }
-    return dots;
+    return { count: n, positions: positions.subarray(0, n * 2), colours: colours.subarray(0, n * 4) };
   }
 
-  private trailLayer(mode: Mode, t: number, trailLength: number, width: number): Layer {
-    return new TripsLayer<SimTrip>({
-      id: `${mode}-trails`,
-      data: this.trips[mode],
-      getPath: (d) => d.path,
-      getTimestamps: (d) => d.times,
-      getColor: (d) => this.colourOf(d),
-      currentTime: t,
-      trailLength,
-      fadeTrail: true,
-      getWidth: width,
-      widthUnits: "pixels",
-      capRounded: true,
-      jointRounded: true,
-      parameters: ADDITIVE,
-    });
+  /** One layer per chunk, shown only while some trip in it can still have a visible trail. */
+  private trailLayers(mode: Mode, t: number, trailLength: number, width: number): Layer[] {
+    return this.chunks[mode].map(
+      (chunk, i) =>
+        new TripsLayer<SimTrip>({
+          id: `${mode}-trails-${i}`,
+          data: chunk.trips,
+          visible: t >= chunk.start && t <= chunk.end + trailLength,
+          getPath: (d) => d.path,
+          getTimestamps: (d) => d.times,
+          getColor: (d) => this.colourOf(d),
+          currentTime: t,
+          trailLength,
+          fadeTrail: true,
+          getWidth: width,
+          widthUnits: "pixels",
+          capRounded: true,
+          jointRounded: true,
+          parameters: ADDITIVE,
+        }),
+    );
   }
 
-  private dotLayers(id: string, dots: Dot[], size: Style): Layer[] {
-    const dot = (suffix: string, radius: number, fill: (d: Dot) => [number, number, number, number], additive: boolean) =>
-      new ScatterplotLayer<Dot>({
+  private dotLayers(id: string, dots: Dots, size: Style): Layer[] {
+    // The three layers share one set of arrays. Alpha comes from layer opacity, so the colours are opaque.
+    const data = {
+      length: dots.count,
+      attributes: {
+        getPosition: { value: dots.positions, size: 2 },
+        getFillColor: { value: dots.colours, size: 4 },
+      },
+    };
+    const dot = (suffix: string, radius: number, opacity: number, additive: boolean) =>
+      new ScatterplotLayer({
         id: `${id}-${suffix}`,
-        data: dots,
-        getPosition: (d) => d.pos,
-        getFillColor: fill,
+        data,
+        opacity,
         getRadius: radius,
         radiusUnits: "pixels",
         ...(additive ? { parameters: ADDITIVE } : {}),
       });
-    return [
-      dot("glow", size.glow, (d) => rgba(d.colour, 45), true),
-      dot("inner", size.inner, (d) => rgba(d.colour, 110), true),
-      dot("core", size.core, () => [255, 255, 255, 255], false),
-    ];
+    return [dot("glow", size.glow, 45 / 255, true), dot("inner", size.inner, 110 / 255, true), dot("core", size.core, 1, false)];
   }
 }

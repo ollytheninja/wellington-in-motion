@@ -50,6 +50,8 @@ export function setupControls(
     }),
   ) as Record<Mode, { row: HTMLElement; fill: HTMLElement; num: HTMLElement }>;
   const peaks: Record<Mode, number | null> = { rail: null, ferry: null, bus: null };
+  let shownTime = "";
+  let shownPos = "";
   const shown: Record<Mode, string> = { rail: "", ferry: "", bus: "" };
 
   const iso = (d: string) => `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
@@ -108,8 +110,11 @@ export function setupControls(
       Object.assign(peaks, next);
     },
     update(c, counts) {
-      clockEl.textContent = formatTime(c.t);
-      if (!dragging) scrub.value = String(Math.round(c.t));
+      // This runs every frame. Writing the same text or value again still costs a repaint in some browsers.
+      const time = formatTime(c.t);
+      if (time !== shownTime) clockEl.textContent = shownTime = time;
+      const pos = String(Math.round(c.t));
+      if (!dragging && pos !== shownPos) scrub.value = shownPos = pos;
       for (const mode of ["rail", "ferry", "bus"] as const) {
         const m = meters[mode];
         const peak = peaks[mode];

@@ -18,7 +18,7 @@ html, body { margin: 0; height: 100%; background: #05070d; color: #cfd8e8; font-
 #controls {
   position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
   width: min(880px, calc(100vw - 48px)); display: flex; align-items: center; gap: 14px;
-  padding: 10px 16px; border-radius: 12px; background: rgba(10, 14, 24, 0.75); backdrop-filter: blur(8px);
+  padding: 10px 16px; border-radius: 12px; background: rgba(10, 14, 24, 0.88); 
   border: 1px solid rgba(255, 255, 255, 0.08); font-size: 13px;
   transition: opacity 0.4s ease;
 }
@@ -32,7 +32,7 @@ button { min-width: 60px; cursor: pointer; }
 label { white-space: nowrap; opacity: 0.8; }
 #credits {
   position: fixed; top: 20px; right: 24px; width: min(300px, calc(100vw - 48px)); box-sizing: border-box;
-  padding: 12px 14px; border-radius: 12px; background: rgba(10, 14, 24, 0.75); backdrop-filter: blur(8px);
+  padding: 12px 14px; border-radius: 12px; background: rgba(10, 14, 24, 0.88); 
   border: 1px solid rgba(255, 255, 255, 0.08); font-size: 12px; line-height: 1.45; color: rgba(207, 216, 232, 0.75);
 }
 #credits.collapsed { width: 30px; height: 30px; padding: 0; border-radius: 50%; }
