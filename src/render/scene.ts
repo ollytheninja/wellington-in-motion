@@ -27,6 +27,8 @@ const ADDITIVE = {
 } as const;
 
 type Rgb = [number, number, number];
+/** Dark enough that the bus network reads as a backdrop, not as something moving. */
+const BUS_ROUTE_RGBA: [number, number, number, number] = [74, 78, 90, 150];
 const rgba = (c: Rgb, a: number): [number, number, number, number] => [c[0], c[1], c[2], a];
 
 function bounds(nets: Network[]): [[number, number], [number, number]] {
@@ -69,6 +71,7 @@ export class Scene {
   private overlay: MapboxOverlay;
   private railColours: Rgb[];
   private baseLines: { path: [number, number][]; colour: Rgb }[] = [];
+  private busLines: { path: [number, number][] }[] = [];
   private stops: { pos: [number, number] }[] = [];
   private trips: Record<Mode, SimTrip[]> = { rail: [], ferry: [], bus: [] };
   private visible: Record<Mode, boolean> = { rail: true, ferry: true, bus: true };
@@ -105,6 +108,11 @@ export class Scene {
     this.map.setStyle(on ? CARTO_DARK : EMPTY_STYLE);
   }
 
+  /** Draw every bus route as a dark grey line. Buses load after the rest, so this is separate from the constructor. */
+  setBusRoutes(net: Network): void {
+    this.busLines = net.shapes.map((s) => ({ path: s.coords }));
+  }
+
   setTrips(mode: Mode, trips: SimTrip[]): void {
     this.trips[mode] = trips;
   }
@@ -122,6 +130,18 @@ export class Scene {
     const trail = Math.min(900, Math.max(120, speed * 0.75));
     const counts: Counts = { rail: 0, ferry: 0, bus: 0 };
     const layers: Layer[] = [
+      ...(this.visible.bus
+        ? [
+            new PathLayer<{ path: [number, number][] }>({
+              id: "bus-routes",
+              data: this.busLines,
+              getPath: (d) => d.path,
+              getColor: BUS_ROUTE_RGBA,
+              getWidth: 1,
+              widthUnits: "pixels",
+            }),
+          ]
+        : []),
       new PathLayer<{ path: [number, number][]; colour: Rgb }>({
         id: "rails",
         data: this.baseLines,

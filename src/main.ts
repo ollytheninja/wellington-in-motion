@@ -74,6 +74,7 @@ async function main() {
   // Buses are most of the data, so they load after trains are already moving.
   void loadNetwork("bus").then((net) => {
     nets.bus = net;
+    scene.setBusRoutes(net);
     rebuild();
     const next = playWindow();
     clock.setBounds(next.min, next.max);
