@@ -12,14 +12,14 @@ End state: the same thing for buses, driven by recorded real-time data as well a
 
 - Wellington trains only (Kapiti, Hutt Valley, Johnsonville, Melling, Wairarapa).
 - One service date at a time, chosen from a date picker. Default is today.
-- Map is a dark background with rail lines and a coastline. A ready-made dark basemap is acceptable here.
+- Map is the LINZ hillshade, dimmed, with the rail lines and coastline on top.
 - Glowing dots, trails, play/pause, speed control, scrubber, clock.
 - Hosted as static files. Works from `vite preview` on a laptop.
 
 ### Phase 2: our own map
 
 - Extract from LINZ Data Service: coastline and water polygons, main roads, rail. Build vector tiles into a single PMTiles file. Style them ourselves.
-- Drop the third-party basemap.
+- Replace the hillshade tiles with our own map built from LINZ data.
 
 ### Phase 3: buses (done, first pass)
 
@@ -136,7 +136,7 @@ Alternative considered: a hand-written canvas or WebGL renderer. It gives full c
 
 The basemap is the LINZ hillshade of the New Zealand surface model, drawn as a MapLibre raster layer. The tiles show sea as the lightest colour and land shaded darker, so we invert their brightness: sea goes near black, land becomes a dim textured grey, and the glowing network stands out. That keeps the Gource look while showing the geography.
 
-The LINZ coastline (`coastline.json`) is drawn on top as a thin line. It is our own data, so it stays when the basemap is switched off.
+The LINZ coastline (`coastline.json`) is drawn on top as a thin line. The basemap is always on. Without an API key the app falls back to a plain dark background, and the coastline still draws.
 
 CARTO dark matter was tried first and dropped: its tiles did not render for us, and its land and water were too close in tone to show the coast.
 
@@ -165,4 +165,3 @@ src/
 - The feed only covers a window (currently 2026-08-23 to 2026-10-10). Days outside it cannot be simulated, and the URL can change, so the pipeline should record the feed version it used.
 - How far ahead and back do we ship days? One day per build is enough to start.
 - Colour by line, by direction, or by delay once we have real data?
-- Which basemap for the MVP: none, a third-party dark style, or wait for our own?

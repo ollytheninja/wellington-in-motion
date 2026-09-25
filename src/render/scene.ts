@@ -37,9 +37,8 @@ const EMPTY_STYLE: maplibregl.StyleSpecification = {
   layers: [{ id: "bg", type: "background", paint: { "background-color": "#05070d" } }],
 };
 
-/** No key means no hillshade, so the map is just the dark background. */
-export const HAS_BASEMAP = Boolean(HILLSHADE_KEY);
-const startStyle = () => (HAS_BASEMAP ? HILLSHADE_STYLE : EMPTY_STYLE);
+/** Without a key there is no hillshade, so the map falls back to the plain dark background. */
+const STYLE = HILLSHADE_KEY ? HILLSHADE_STYLE : EMPTY_STYLE;
 
 /** Adds up brightness where things overlap. This is what makes busy corridors glow. */
 const ADDITIVE = {
@@ -123,17 +122,13 @@ export class Scene {
 
     this.map = new maplibregl.Map({
       container,
-      style: startStyle(),
+      style: STYLE,
       bounds: bounds(base.map((b) => b.net)),
       fitBoundsOptions: { padding: { top: 60, bottom: 120, left: 60, right: 60 } },
       attributionControl: { compact: true, customAttribution: coastline ? [coastline.attribution] : [] },
     });
     this.overlay = new MapboxOverlay({ interleaved: false, layers: [] });
     this.map.addControl(this.overlay as unknown as maplibregl.IControl);
-  }
-
-  setBasemap(on: boolean): void {
-    this.map.setStyle(on && HAS_BASEMAP ? HILLSHADE_STYLE : EMPTY_STYLE);
   }
 
   /** Draw every bus route as a dark grey line. Buses load after the rest, so this is separate from the constructor. */
