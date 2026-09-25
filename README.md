@@ -1,6 +1,6 @@
-# trains
+# Wellington in motion
 
-A dark-mode, glowing-dots map of every Wellington train over a 24 hour period, with a scrubbable timeline. Simulated from Metlink's published timetables first. Live data and buses come later.
+A dark-mode, glowing-dots map of every Wellington train, ferry and bus over a day, with a scrubbable timeline. Simulated from Metlink's published timetables. Live data is a later phase.
 
 Inspiration: https://lnkd.in/p/ey5qq6ds (an animation of every train in the Netherlands over 24 hours, in a Gource-like style).
 
