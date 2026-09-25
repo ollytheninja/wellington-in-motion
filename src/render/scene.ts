@@ -4,7 +4,7 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { TripsLayer } from "@deck.gl/geo-layers";
 import type { Layer } from "@deck.gl/core";
-import type { Mode } from "../data/load";
+import type { Coastline, Mode } from "../data/load";
 import type { Network } from "../types";
 import { BUS_COLOUR, FALLBACK_COLOUR, FERRY_COLOUR, LINE_COLOURS, hexToRgb } from "../palette";
 import { positionAt, type SimTrip } from "../sim/sim";
@@ -27,6 +27,8 @@ const ADDITIVE = {
 } as const;
 
 type Rgb = [number, number, number];
+/** A cool blue-grey, brighter than the bus routes so the shape of the harbour reads first. */
+const COAST_RGBA: [number, number, number, number] = [110, 140, 185, 130];
 /** Dark enough that the bus network reads as a backdrop, not as something moving. */
 const BUS_ROUTE_RGBA: [number, number, number, number] = [74, 78, 90, 150];
 const rgba = (c: Rgb, a: number): [number, number, number, number] => [c[0], c[1], c[2], a];
@@ -71,6 +73,7 @@ export class Scene {
   private overlay: MapboxOverlay;
   private railColours: Rgb[];
   private baseLines: { path: [number, number][]; colour: Rgb }[] = [];
+  private coastLines: { path: [number, number][] }[];
   private busLines: { path: [number, number][] }[] = [];
   private stops: { pos: [number, number] }[] = [];
   private trips: Record<Mode, SimTrip[]> = { rail: [], ferry: [], bus: [] };
@@ -78,7 +81,8 @@ export class Scene {
   private fixedColour: Record<"ferry" | "bus", Rgb> = { ferry: hexToRgb(FERRY_COLOUR), bus: hexToRgb(BUS_COLOUR) };
 
   /** `base` are the modes with drawn track and stops. Their shapes set the initial view. */
-  constructor(container: HTMLElement, base: { mode: Mode; net: Network }[]) {
+  constructor(container: HTMLElement, base: { mode: Mode; net: Network }[], coastline: Coastline | null) {
+    this.coastLines = (coastline?.lines ?? []).map((path) => ({ path }));
     const rail = base.find((b) => b.mode === "rail")!.net;
     this.railColours = rail.routes.map((r) => hexToRgb(LINE_COLOURS[r.short] ?? FALLBACK_COLOUR));
     for (const { mode, net } of base) {
@@ -98,7 +102,7 @@ export class Scene {
       style: CARTO_DARK,
       bounds: bounds(base.map((b) => b.net)),
       fitBoundsOptions: { padding: { top: 60, bottom: 120, left: 60, right: 60 } },
-      attributionControl: { compact: true },
+      attributionControl: { compact: true, customAttribution: coastline ? [coastline.attribution] : [] },
     });
     this.overlay = new MapboxOverlay({ interleaved: false, layers: [] });
     this.map.addControl(this.overlay as unknown as maplibregl.IControl);
@@ -130,6 +134,14 @@ export class Scene {
     const trail = Math.min(900, Math.max(120, speed * 0.75));
     const counts: Counts = { rail: 0, ferry: 0, bus: 0 };
     const layers: Layer[] = [
+      new PathLayer<{ path: [number, number][] }>({
+        id: "coastline",
+        data: this.coastLines,
+        getPath: (d) => d.path,
+        getColor: COAST_RGBA,
+        getWidth: 1.2,
+        widthUnits: "pixels",
+      }),
       ...(this.visible.bus
         ? [
             new PathLayer<{ path: [number, number][] }>({

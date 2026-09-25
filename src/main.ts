@@ -1,6 +1,6 @@
 import "./style.css";
 import { Clock } from "./clock/clock";
-import { availableDates, loadNetwork, type Mode } from "./data/load";
+import { availableDates, loadCoastline, loadNetwork, type Mode } from "./data/load";
 import { Scene } from "./render/scene";
 import { buildDay, type Day } from "./sim/sim";
 import type { Network } from "./types";
@@ -24,7 +24,7 @@ function aucklandNow(): { date: string; seconds: number } {
 }
 
 async function main() {
-  const [rail, ferry] = await Promise.all([loadNetwork("rail"), loadNetwork("ferry")]);
+  const [rail, ferry, coastline] = await Promise.all([loadNetwork("rail"), loadNetwork("ferry"), loadCoastline()]);
   const nets: Partial<Record<Mode, Network>> = { rail, ferry };
   const days: Partial<Record<Mode, Day>> = {};
   const dates = availableDates(rail);
@@ -33,10 +33,14 @@ async function main() {
   // Default to today if the feed covers it, otherwise the nearest date it does.
   let date = dates.includes(now.date) ? now.date : now.date < dates[0]! ? dates[0]! : dates[dates.length - 1]!;
 
-  const scene = new Scene(document.getElementById("map")!, [
-    { mode: "rail", net: rail },
-    { mode: "ferry", net: ferry },
-  ]);
+  const scene = new Scene(
+    document.getElementById("map")!,
+    [
+      { mode: "rail", net: rail },
+      { mode: "ferry", net: ferry },
+    ],
+    coastline,
+  );
 
   /** Rebuild every loaded mode for `date` and hand the trips to the scene. */
   const rebuild = () => {

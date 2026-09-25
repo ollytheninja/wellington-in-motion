@@ -49,3 +49,16 @@ export interface WireNetwork {
     c: number[];
   }[];
 }
+
+/** public/data/coastline.json. Carries the credit the licence requires, so the app can show it. */
+export interface WireCoastline {
+  version: 1;
+  source: string;
+  sourceUrl: string;
+  licence: string;
+  licenceUrl: string;
+  /** What we did to the source data. CC BY 4.0 asks for this. */
+  changes: string;
+  /** Each line is [lon0, lat0, dlon1, dlat1, ...] in units of 1e-5 degrees, as for shapes. */
+  lines: number[][];
+}

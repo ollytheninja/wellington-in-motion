@@ -42,7 +42,8 @@ End state: the same thing for buses, driven by recorded real-time data as well a
 | --- | --- | --- |
 | Timetables | Metlink GTFS static feed | Needs `stops`, `routes`, `trips`, `stop_times`, `shapes`, `calendar`, `calendar_dates`. Confirm the download URL and licence on the Metlink open data page before building. |
 | Live positions | Metlink real-time API (GTFS-RT vehicle positions) | Needs an API key. Phase 4 only. |
-| Map features | LINZ Data Service | Phase 2. Licence is CC BY 4.0, so attribution is required. |
+| Coastline | LINZ Data Service, layer 50258 (NZ Coastlines, Topo 1:50k) | In use. Fetched over WFS with an API key (`make coastline`), clipped and simplified by `pipeline/coastline.ts`. CC BY 4.0, credited in the map attribution. |
+| Other map features | LINZ Data Service | Phase 2. Roads, water polygons. Same licence, so the same credit applies. |
 
 ## System overview
 

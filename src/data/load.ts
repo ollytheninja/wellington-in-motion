@@ -1,5 +1,6 @@
-import type { Network, WireNetwork } from "../types";
-import { decodeNetwork } from "./wire";
+import type { LonLat } from "../geo";
+import type { Network, WireCoastline, WireNetwork } from "../types";
+import { decodeNetwork, decodeShape } from "./wire";
 
 export type Mode = "rail" | "ferry" | "bus";
 
@@ -16,4 +17,23 @@ export function availableDates(net: Network): string[] {
   const dates = new Set<string>();
   for (const service of net.services) for (const d of service) dates.add(d);
   return [...dates].sort();
+}
+
+export interface Coastline {
+  lines: LonLat[][];
+  /** HTML for the map's attribution control. */
+  attribution: string;
+}
+
+/** The coastline is optional. Returns null if `make coastline` has not been run. */
+export async function loadCoastline(): Promise<Coastline | null> {
+  const res = await fetch(`${import.meta.env.BASE_URL}data/coastline.json`);
+  if (!res.ok) return null;
+  const wire = (await res.json()) as WireCoastline;
+  return {
+    lines: wire.lines.map(decodeShape),
+    attribution:
+      `Coastline: <a href="${wire.sourceUrl}" target="_blank" rel="noopener">${wire.source}</a>, ` +
+      `<a href="${wire.licenceUrl}" target="_blank" rel="noopener">${wire.licence}</a>. ${wire.changes}`,
+  };
 }

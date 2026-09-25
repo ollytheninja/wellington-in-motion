@@ -1,10 +1,15 @@
+# LINZ_API_KEY for `make coastline` comes from the environment or a gitignored .env file.
+-include .env
+export LINZ_API_KEY
+
 GTFS_URL ?= https://static.opendata.metlink.org.nz/v1/gtfs/full.zip
 
-.PHONY: help install refresh data dev build preview test check clean
+.PHONY: help install refresh coastline data dev build preview test check clean
 
 help:
 	@echo "make install   install dependencies"
 	@echo "make refresh   download the latest Metlink GTFS into ./gtfs and rebuild the data"
+	@echo "make coastline download the LINZ coastline (needs LINZ_API_KEY) and process it"
 	@echo "make data      build public/data from ./gtfs, if it changed"
 	@echo "make dev       run the dev server on http://localhost:5173"
 	@echo "make build     typecheck and build the static site into ./dist"
@@ -35,6 +40,11 @@ refresh: node_modules
 	rm -rf gtfs; mv "$$tmp/gtfs" gtfs; \
 	echo "Unpacked $$(ls gtfs | wc -l | tr -d ' ') files into ./gtfs"
 	npm run data
+
+# Needs a free LINZ Data Service API key. The raw download is cached in ./cache, which is gitignored.
+coastline: node_modules
+	@test -n "$(LINZ_API_KEY)" || { echo "LINZ_API_KEY is not set. Put it in .env (see .env.example) or export it."; exit 1; }
+	npm run coastline
 
 data: public/data/network.json
 

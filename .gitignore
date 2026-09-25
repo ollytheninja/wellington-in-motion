@@ -2,3 +2,5 @@ node_modules
 dist
 gtfs
 public/data
+.env
+cache
