@@ -44,6 +44,8 @@ button { cursor: pointer; }
 
 /* Settings inside the credits box */
 #settings { display: grid; gap: 8px; margin-bottom: 14px; }
+#settings #now { width: 100%; padding: 7px 10px; font-size: 12px; }
+#settings #now:hover { background: rgba(255, 255, 255, 0.18); }
 #settings .row { display: flex; align-items: center; gap: 10px; }
 #settings select { flex: 1; min-width: 0; font-size: 12px; }
 #settings .check { display: flex; align-items: center; gap: 8px; cursor: pointer; }

@@ -5,17 +5,27 @@ import { Scene } from "./render/scene";
 import { buildDay, type Day } from "./sim/sim";
 import type { Network } from "./types";
 import { DEFAULT_SPEED, setupControls, type Controls } from "./ui/controls";
+import { addDays } from "./data/wire";
 import { renderCredits } from "./ui/credits";
 
-function aucklandToday(): string {
+/** The date (YYYYMMDD) and time of day, in seconds, in Wellington right now. */
+function aucklandNow(): { date: string; seconds: number } {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Pacific/Auckland",
+    hourCycle: "h23",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   }).formatToParts(new Date());
-  const get = (type: string) => parts.find((p) => p.type === type)!.value;
-  return `${get("year")}${get("month")}${get("day")}`;
+  const get = (type: string) => +parts.find((p) => p.type === type)!.value;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    date: `${get("year")}${pad(get("month"))}${pad(get("day"))}`,
+    seconds: get("hour") * 3600 + get("minute") * 60 + get("second"),
+  };
 }
 
 async function main() {
@@ -23,7 +33,7 @@ async function main() {
   const nets: Partial<Record<Mode, Network>> = { rail, ferry };
   const days: Partial<Record<Mode, Day>> = {};
   const dates = availableDates(rail);
-  const today = aucklandToday();
+  const today = aucklandNow().date;
 
   // Default to today if the feed covers it, otherwise the nearest date it does.
   let date = dates.includes(today) ? today : today < dates[0]! ? dates[0]! : dates[dates.length - 1]!;
@@ -66,18 +76,50 @@ async function main() {
   // Hold at the start until the buses arrive, so the day does not run on without them.
   clock.held = true;
 
+  /** Show another service day, from its first minute. */
+  const loadDate = (d: string) => {
+    date = d;
+    rebuild();
+    controls.setPeaks(peaks());
+    const next = playWindow();
+    clock.setRange(next.min, next.max);
+    clock.playing = true;
+    controls.syncRange(clock);
+    controls.showDate(d);
+  };
+
+  /**
+   * Real time, right now: today's date and the time of day, at 1x, playing. Before the first
+   * train of the morning it is still yesterday's service day, whose times run past 24:00, so
+   * 01:00 is 25:00 on yesterday's clock. If the feed does not cover today, the nearest day it does.
+   */
+  const goToNow = () => {
+    const now = aucklandNow();
+    const candidates = [
+      { date: now.date, t: now.seconds },
+      { date: addDays(now.date, -1), t: now.seconds + 86400 },
+    ];
+    let target = candidates.find((c) => {
+      if (!dates.includes(c.date)) return false;
+      if (c.date !== date) loadDate(c.date);
+      return c.t >= clock.min && c.t <= clock.max;
+    });
+    if (!target) {
+      const fallback = dates.includes(now.date) ? now.date : now.date < dates[0]! ? dates[0]! : dates[dates.length - 1]!;
+      if (fallback !== date) loadDate(fallback);
+      target = { date: fallback, t: now.seconds };
+    }
+    clock.seek(target.t);
+    clock.speed = 1;
+    clock.playing = true;
+    controls.showSpeed(1);
+  };
+
   const controls: Controls = setupControls(clock, {
     dates,
     date,
-    onDate: (d) => {
-      date = d;
-      rebuild();
-      controls.setPeaks(peaks());
-      const next = playWindow();
-      clock.setRange(next.min, next.max);
-      clock.playing = true;
-      controls.syncRange(clock);
-    },
+    onDate: (d) => loadDate(d),
+    onNow: () => goToNow(),
     onBuses: (on) => scene.setVisible("bus", on),
   });
 

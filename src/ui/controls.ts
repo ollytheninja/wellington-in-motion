@@ -33,13 +33,17 @@ export interface Controls {
   setPeaks(peaks: Record<Mode, number | null>): void;
   /** Buses load after trains. Enables the Buses checkbox once they are in. */
   busesReady(): void;
+  /** Show `date` (YYYYMMDD) in the date picker. */
+  showDate(date: string): void;
+  /** Show `speed` as the selected speed. */
+  showSpeed(speed: number): void;
   /** Match the scrubber to the clock's window. Call after `clock.setRange`. */
   syncRange(clock: Clock): void;
 }
 
 export function setupControls(
   clock: Clock,
-  opts: { dates: string[]; date: string; onDate(date: string): void; onBuses(on: boolean): void },
+  opts: { dates: string[]; date: string; onDate(date: string): void; onNow(): void; onBuses(on: boolean): void },
 ): Controls {
   const play = $<HTMLButtonElement>("play");
   const loopBox = $<HTMLInputElement>("loop");
@@ -87,6 +91,7 @@ export function setupControls(
     clock.playing = !clock.playing;
     syncPlay();
   });
+  $<HTMLButtonElement>("now").addEventListener("click", () => opts.onNow());
   loopBox.addEventListener("change", () => (clock.loop = loopBox.checked));
   window.addEventListener("keydown", (e) => {
     const tag = (e.target as HTMLElement).tagName;
@@ -119,6 +124,12 @@ export function setupControls(
   syncRange(clock);
   return {
     syncRange,
+    showDate(date) {
+      dateInput.value = iso(date);
+    },
+    showSpeed(value) {
+      speed.value = String(value);
+    },
     busesReady() {
       busesLoaded = true;
       busBox.disabled = false;

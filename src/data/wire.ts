@@ -39,7 +39,8 @@ export function deltaDecode(packed: number[]): number[] {
   return out;
 }
 
-function addDays(date: string, n: number): string {
+/** `date` (YYYYMMDD) moved by `n` days. */
+export function addDays(date: string, n: number): string {
   const d = new Date(Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8) + n));
   return d.toISOString().slice(0, 10).replaceAll("-", "");
 }
