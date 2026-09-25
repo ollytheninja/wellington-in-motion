@@ -6,13 +6,20 @@ export const SPEEDS = [
   { label: "1x", value: 1 },
   { label: "1 min/s", value: 60 },
   { label: "5 min/s", value: 300 },
-  { label: "12 min/s (day in 2 min)", value: 720 },
+  { label: "12 min/s", value: 720 },
   { label: "30 min/s", value: 1800 },
   { label: "1 hr/s", value: 3600 },
 ];
 export const DEFAULT_SPEED = 720;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+/** How long a span of real seconds takes to say, to about two figures. */
+export function formatDuration(seconds: number): string {
+  if (seconds < 90) return `${Math.round(seconds)} s`;
+  if (seconds < 5400) return `${Math.round(seconds / 60)} min`;
+  return `${Math.round(seconds / 3600)} h`;
+}
 
 export interface Controls {
   /** Reflect the clock and train count in the UI. Call every frame. */
@@ -45,6 +52,10 @@ export function setupControls(
 
   for (const s of SPEEDS) speed.add(new Option(s.label, String(s.value), false, s.value === clock.speed));
   speed.addEventListener("change", () => (clock.speed = +speed.value));
+  /** The play window changes with the date and the modes loaded, so "day in ..." is worked out from it. */
+  const labelSpeeds = (c: Clock) => {
+    SPEEDS.forEach((s, i) => (speed.options[i]!.text = `${s.label} (day in ${formatDuration((c.max - c.min) / s.value)})`));
+  };
 
   const syncPlay = () => (play.textContent = clock.playing ? "Pause" : "Play");
   play.addEventListener("click", () => {
@@ -71,6 +82,7 @@ export function setupControls(
   const syncRange = (c: Clock) => {
     scrub.min = String(c.min);
     scrub.max = String(c.max);
+    labelSpeeds(c);
   };
   syncRange(clock);
   return {
