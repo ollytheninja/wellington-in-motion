@@ -15,21 +15,11 @@ html, body { margin: 0; height: 100%; background: #05070d; color: #cfd8e8; font-
 .meter .n { min-width: 3ch; text-align: right; color: #fff; font-variant-numeric: tabular-nums; }
 .meter .what { opacity: 0.6; }
 .meter.off { opacity: 0.35; }
-#controls {
-  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
-  width: min(880px, calc(100vw - 48px)); display: flex; align-items: center; gap: 14px;
-  padding: 10px 16px; border-radius: 12px; background: rgba(10, 14, 24, 0.88); 
-  border: 1px solid rgba(255, 255, 255, 0.08); font-size: 13px;
-  transition: opacity 0.4s ease;
-}
-#controls.idle { opacity: 0; pointer-events: none; }
-#scrub { flex: 1; accent-color: #8ab4ff; }
 button, select, input[type="date"] {
   background: rgba(255, 255, 255, 0.08); color: inherit; border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px; padding: 5px 10px; font: inherit; color-scheme: dark;
 }
-button { min-width: 60px; cursor: pointer; }
-label { white-space: nowrap; opacity: 0.8; }
+button { cursor: pointer; }
 #credits {
   position: fixed; top: 20px; right: 24px; width: min(300px, calc(100vw - 48px)); box-sizing: border-box;
   padding: 12px 14px; border-radius: 12px; background: rgba(10, 14, 24, 0.88); 
@@ -51,3 +41,38 @@ label { white-space: nowrap; opacity: 0.8; }
 #credits b { display: block; font-weight: 500; color: #cfd8e8; }
 #credits a { color: #8ab4ff; text-decoration: none; }
 #credits a:hover { text-decoration: underline; }
+
+/* Settings inside the credits box */
+#settings { display: grid; gap: 8px; margin-bottom: 14px; }
+#settings .row { display: flex; align-items: center; gap: 10px; }
+#settings select { flex: 1; min-width: 0; font-size: 12px; }
+#settings .check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+#settings input[type="checkbox"] { margin: 0; accent-color: #8ab4ff; }
+#credits-toggle { font-style: normal; }
+#credits.collapsed #credits-toggle { font: 400 16px/30px ui-sans-serif, system-ui, sans-serif; }
+#credits:not(.collapsed) #credits-toggle { font: 400 18px/20px ui-sans-serif, system-ui, sans-serif; }
+
+/* A flat progress bar along the bottom, with a play button at the far left */
+#timeline { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 14px; padding: 0 24px 14px; }
+#play {
+  flex: none; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08); color: #fff; transition: opacity 0.4s ease;
+}
+#play:hover { background: rgba(255, 255, 255, 0.18); }
+#scrub {
+  flex: 1; min-width: 0; height: 20px; margin: 0; padding: 0; cursor: pointer;
+  -webkit-appearance: none; appearance: none; background:
+    linear-gradient(#8ab4ff, #8ab4ff) left center / calc(6px + (100% - 12px) * var(--frac, 0)) 3px no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)) center / 100% 3px no-repeat;
+}
+#scrub::-webkit-slider-runnable-track { height: 20px; background: transparent; }
+#scrub::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 12px; height: 12px; margin-top: 4px; border-radius: 50%;
+  background: #fff; border: none; box-shadow: 0 0 8px rgba(255, 255, 255, 0.6); transition: opacity 0.4s ease;
+}
+#scrub::-moz-range-track { height: 20px; background: transparent; }
+#scrub::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: none; box-shadow: 0 0 8px rgba(255, 255, 255, 0.6); transition: opacity 0.4s ease; }
+/* When the mouse is idle the handle disappears and the button dims. The line stays. */
+#timeline.idle #play { opacity: 0.35; }
+#timeline.idle #scrub::-webkit-slider-thumb { opacity: 0; }
+#timeline.idle #scrub::-moz-range-thumb { opacity: 0; }

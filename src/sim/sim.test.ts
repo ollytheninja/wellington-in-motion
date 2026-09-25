@@ -40,22 +40,31 @@ describe("sim", () => {
     for (let i = 1; i < times.length; i++) expect(times[i]!).toBeGreaterThanOrEqual(times[i - 1]!);
   });
 
-  it("day window runs from the first train to the last, with the end rounded up to 15 minutes", () => {
+  it("day window runs from a minute before the first departure to a minute after the last arrival", () => {
     const day = buildDay(net, "20260925", "rail");
     expect(day.trips).toHaveLength(1);
-    expect(day.start).toBe(36000); // 10:00, the first departure
-    expect(day.end).toBe(37800); // 10:30, the 10:22 arrival rounded up
+    expect(day.start).toBe(35940); // a minute before the 10:00 departure
+    expect(day.end).toBe(37380); // a minute after the 10:22 arrival
   });
 
   it("trips past midnight stay in the day they started", () => {
     const day = buildDay(net, "20260924", "rail");
-    expect(day.start).toBe(85500); // 23:45, the 23:50 departure rounded down
-    expect(day.end).toBe(88200);
+    expect(day.start).toBe(85740);
+    expect(day.end).toBe(88260);
   });
 
-  it("clock wraps at the end of its window", () => {
+  it("clock stops at the end of its window by default", () => {
     const c = new Clock(1099, 1, 1000, 1100);
     c.tick(2000);
+    expect(c.t).toBe(1100);
+    expect(c.playing).toBe(false);
+  });
+
+  it("clock wraps at the end of its window when looping", () => {
+    const c = new Clock(1099, 1, 1000, 1100);
+    c.loop = true;
+    c.tick(2000);
     expect(c.t).toBeCloseTo(1001);
+    expect(c.playing).toBe(true);
   });
 });

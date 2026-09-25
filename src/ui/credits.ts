@@ -8,10 +8,10 @@ const CC_BY_URL = "https://creativecommons.org/licenses/by/4.0/";
 const link = (text: string, href: string) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
 
 /**
- * Fills the credits box. Timetables and the hillshade are fixed. The coastline credit comes
+ * Fills the credits list in the settings and credits box. Timetables and the hillshade are fixed. The coastline credit comes
  * from the data file, so the words CC BY 4.0 asks for stay with the data. The hillshade is
- * only credited when it is actually drawn, which needs its API key. The box collapses to an
- * "i" button and remembers that choice.
+ * only credited when it is actually drawn, which needs its API key. The box collapses to a
+ * gear button and remembers that choice.
  */
 export function renderCredits(el: HTMLElement, coastline: Credit | null): void {
   const rows: string[] = [
@@ -26,16 +26,15 @@ export function renderCredits(el: HTMLElement, coastline: Credit | null): void {
     );
   }
   rows.push(`<p><b>Source code</b> ${link("github.com/ollytheninja/wellington-in-motion", REPO_URL)}</p>`);
-  el.innerHTML =
-    `<button type="button" id="credits-toggle" aria-controls="credits-body"></button>` +
-    `<div id="credits-body"><h2>Credits</h2>${rows.join("")}</div>`;
+  el.querySelector("#credit-list")!.innerHTML = rows.join("");
 
   const toggle = el.querySelector<HTMLButtonElement>("#credits-toggle")!;
   const setCollapsed = (collapsed: boolean) => {
     el.classList.toggle("collapsed", collapsed);
-    toggle.textContent = collapsed ? "i" : "\u00d7";
+    // U+FE0E asks for the plain text gear, not the emoji one.
+    toggle.textContent = collapsed ? "\u2699\uFE0E" : "\u00d7";
     toggle.setAttribute("aria-expanded", String(!collapsed));
-    toggle.setAttribute("aria-label", collapsed ? "Show credits" : "Hide credits");
+    toggle.setAttribute("aria-label", collapsed ? "Show settings and credits" : "Hide settings and credits");
     try {
       localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
     } catch {

@@ -4,6 +4,8 @@ export class Clock {
   playing = true;
   /** While true the clock does not advance, even when playing. Used to wait for data to load. */
   held = false;
+  /** At the end of the window, go back to the start instead of stopping. */
+  loop = false;
   speed: number;
   min: number;
   max: number;
@@ -15,22 +17,30 @@ export class Clock {
     this.max = max;
   }
 
-  /** Advance by `dtMs` of real time. Wraps at the end of the window. */
+  /** Advance by `dtMs` of real time. At the end of the window it stops, or wraps if `loop` is set. */
   tick(dtMs: number): void {
     if (!this.playing || this.held) return;
-    this.seek(this.t + (dtMs / 1000) * this.speed);
+    const next = this.t + (dtMs / 1000) * this.speed;
+    if (next < this.max) {
+      this.t = next;
+    } else if (this.loop) {
+      this.t = this.min + ((next - this.min) % (this.max - this.min));
+    } else {
+      this.t = this.max;
+      this.playing = false;
+    }
   }
 
+  /** Jump to `t`, kept inside the window. */
   seek(t: number): void {
-    const span = this.max - this.min;
-    this.t = this.min + ((((t - this.min) % span) + span) % span);
+    this.t = Math.min(this.max, Math.max(this.min, t));
   }
 
   /** Change the window but keep the current time if it is still inside. */
   setBounds(min: number, max: number): void {
     this.min = min;
     this.max = max;
-    this.t = Math.min(max, Math.max(min, this.t));
+    this.seek(this.t);
   }
 
   /** Change the window and go back to its start. */

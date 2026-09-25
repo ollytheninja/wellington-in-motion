@@ -22,11 +22,12 @@ export interface Day {
   peak: number;
 }
 
-const ROUND = 900;
+/** The window opens this long before the first departure and closes this long after the last arrival, so the ends of the timeline show an empty map. */
+const MARGIN = 60;
 
 /**
- * The trips of one service day, and the window to play. The window starts at the first
- * train and ends at the last, so the timeline has no dead hours. Trips after midnight
+ * The trips of one service day, and the window to play. The window runs from a minute before
+ * the first departure to a minute after the last arrival, so the timeline has no dead hours. Trips after midnight
  * belong to the day they started on.
  */
 export function buildDay(net: Network, date: string, mode: Mode): Day {
@@ -40,7 +41,7 @@ export function buildDay(net: Network, date: string, mode: Mode): Day {
     start = Math.min(start, t.times[0]!);
     end = Math.max(end, t.times[t.times.length - 1]!);
   }
-  return { trips, start: Math.floor(start / ROUND) * ROUND, end: Math.ceil(end / ROUND) * ROUND, peak: peakConcurrent(trips) };
+  return { trips, start: start - MARGIN, end: end + MARGIN, peak: peakConcurrent(trips) };
 }
 
 /** The most trips running at once. A trip counts from its first time to its last, both included, as `positionAt` does. */

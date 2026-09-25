@@ -14,6 +14,9 @@ export const SPEEDS = [
 ];
 export const DEFAULT_SPEED = 720;
 
+const ICON_PLAY = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 4.5h4v15H6zM14 4.5h4v15h-4z" fill="currentColor"/></svg>';
+
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 /** How long a span of real seconds takes to say, to about two figures. */
@@ -39,6 +42,7 @@ export function setupControls(
   opts: { dates: string[]; date: string; onDate(date: string): void; onBuses(on: boolean): void },
 ): Controls {
   const play = $<HTMLButtonElement>("play");
+  const loopBox = $<HTMLInputElement>("loop");
   const scrub = $<HTMLInputElement>("scrub");
   const speed = $<HTMLSelectElement>("speed");
   const dateInput = $<HTMLInputElement>("date");
@@ -70,13 +74,23 @@ export function setupControls(
     SPEEDS.forEach((s, i) => (speed.options[i]!.text = `${s.label} (day in ${formatDuration((c.max - c.min) / s.value)})`));
   };
 
-  const syncPlay = () => (play.textContent = clock.playing ? "Pause" : "Play");
+  let shownPlaying: boolean | null = null;
+  const syncPlay = () => {
+    if (shownPlaying === clock.playing) return;
+    shownPlaying = clock.playing;
+    play.innerHTML = clock.playing ? ICON_PAUSE : ICON_PLAY;
+    play.setAttribute("aria-label", clock.playing ? "Pause" : "Play");
+  };
   play.addEventListener("click", () => {
+    // Pressing play at the end of the day starts it again.
+    if (!clock.playing && clock.t >= clock.max) clock.seek(clock.min);
     clock.playing = !clock.playing;
     syncPlay();
   });
+  loopBox.addEventListener("change", () => (clock.loop = loopBox.checked));
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && (e.target as HTMLElement).tagName !== "INPUT") {
+    const tag = (e.target as HTMLElement).tagName;
+    if (e.code === "Space" && tag !== "INPUT" && tag !== "SELECT" && tag !== "BUTTON") {
       e.preventDefault();
       play.click();
     }
@@ -91,7 +105,7 @@ export function setupControls(
   busBox.addEventListener("change", () => opts.onBuses(busBox.checked));
   let busesLoaded = false;
 
-  autoHide($("controls"));
+  autoHide($("timeline"));
 
   syncPlay();
   const syncRange = (c: Clock) => {
@@ -99,6 +113,9 @@ export function setupControls(
     scrub.max = String(c.max);
     labelSpeeds(c);
   };
+  /** The filled part of the track. The CSS turns this 0 to 1 fraction into a width. */
+  const setFraction = (c: Clock) => scrub.style.setProperty("--frac", String((c.t - c.min) / (c.max - c.min)));
+  scrub.addEventListener("input", () => setFraction(clock));
   syncRange(clock);
   return {
     syncRange,
@@ -114,7 +131,12 @@ export function setupControls(
       const time = formatTime(c.t);
       if (time !== shownTime) clockEl.textContent = shownTime = time;
       const pos = String(Math.round(c.t));
-      if (!dragging && pos !== shownPos) scrub.value = shownPos = pos;
+      if (pos !== shownPos) {
+        shownPos = pos;
+        if (!dragging) scrub.value = pos;
+        setFraction(c);
+      }
+      syncPlay();
       for (const mode of ["rail", "ferry", "bus"] as const) {
         const m = meters[mode];
         const peak = peaks[mode];

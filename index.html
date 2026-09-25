@@ -17,12 +17,22 @@
         <div class="meter" data-mode="ferry"><div class="bar"><i></i></div><span class="n"></span><span class="what">ferries</span></div>
       </div>
     </div>
-    <aside id="credits"></aside>
-    <div id="controls">
-      <button id="play" aria-label="Play or pause">Pause</button>
-      <input id="scrub" type="range" min="0" max="86400" step="10" value="0" />
-      <select id="speed" aria-label="Speed"></select>
-      <label><input id="buses" type="checkbox" checked disabled /> Buses</label>
+    <aside id="credits">
+      <button type="button" id="credits-toggle" aria-controls="credits-body"></button>
+      <div id="credits-body">
+        <h2>Settings</h2>
+        <div id="settings">
+          <label class="row">Speed <select id="speed" aria-label="Speed"></select></label>
+          <label class="check"><input id="buses" type="checkbox" checked disabled /> Show buses</label>
+          <label class="check"><input id="loop" type="checkbox" /> Loop the day</label>
+        </div>
+        <h2>Credits</h2>
+        <div id="credit-list"></div>
+      </div>
+    </aside>
+    <div id="timeline">
+      <button id="play" type="button" aria-label="Play or pause"></button>
+      <input id="scrub" type="range" min="0" max="86400" step="10" value="0" aria-label="Time of day" />
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

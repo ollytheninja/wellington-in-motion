@@ -75,6 +75,7 @@ async function main() {
       controls.setPeaks(peaks());
       const next = playWindow();
       clock.setRange(next.min, next.max);
+      clock.playing = true;
       controls.syncRange(clock);
     },
     onBuses: (on) => scene.setVisible("bus", on),
