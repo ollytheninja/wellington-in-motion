@@ -31,3 +31,15 @@ Space toggles play/pause. Drag the slider to scrub. The date picker covers the d
 `make coastline` needs a free LINZ Data Service API key. Put it in `.env` (gitignored, copy `.env.example`) or export `LINZ_API_KEY`. The raw download is cached in `./cache`, also gitignored.
 
 The hillshade needs a LINZ Basemaps API key in `VITE_LINZ_BASEMAPS_KEY` (in `.env`, see `.env.example`). Vite bakes it into the built site, so anyone loading the page can see it. Restrict the key to your domain when you deploy. Without a key the app still runs, on a plain dark background.
+
+## Deploying to GitHub Pages
+
+`.github/workflows/pages.yml` builds and publishes the site. It runs on every push to `main`, daily at 04:00 NZ time, and on demand from the Actions tab. Each run downloads the latest Metlink feed and the LINZ coastline, builds the data, then builds and deploys the site, so nothing generated is committed.
+
+One-off setup:
+
+1. In the repo, go to Settings > Pages and set Source to **GitHub Actions**.
+2. Under Settings > Secrets and variables > Actions, add two repository secrets: `LINZ_API_KEY` (the LINZ Data Service key used by `make coastline`) and `VITE_LINZ_BASEMAPS_KEY` (the LINZ Basemaps key).
+3. In your LINZ Basemaps account, restrict that key to your Pages domain (`<user>.github.io`). It ends up in the published JavaScript.
+
+The workflow fails early if either secret is missing, instead of publishing a map with no basemap. Scheduled workflows are switched off by GitHub after 60 days without repo activity, so push something now and then, or the daily refresh stops.
