@@ -1,5 +1,6 @@
 import type { Clock } from "../clock/clock";
 import { formatTime } from "../clock/clock";
+import { autoHide } from "./autohide";
 import type { Counts } from "../render/scene";
 
 export const SPEEDS = [
@@ -77,6 +78,8 @@ export function setupControls(
   const busBox = $<HTMLInputElement>("buses");
   busBox.addEventListener("change", () => opts.onBuses(busBox.checked));
   let busesLoaded = false;
+
+  autoHide($("controls"));
 
   syncPlay();
   const syncRange = (c: Clock) => {
