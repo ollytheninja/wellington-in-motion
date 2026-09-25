@@ -1,6 +1,6 @@
 import type { Credit } from "../data/load";
 
-const REPO_URL = "https://github.com/ollytheninja/trains";
+const REPO_URL = "https://github.com/ollytheninja/wellington-in-motion";
 const METLINK_URL = "https://www.metlink.org.nz/legal/general-transit-feed-specification";
 const STORAGE_KEY = "credits-collapsed";
 const CC_BY_URL = "https://creativecommons.org/licenses/by/4.0/";
@@ -25,7 +25,7 @@ export function renderCredits(el: HTMLElement, coastline: Credit | null): void {
       `<p><b>Coastline</b> ${link(coastline.source, coastline.sourceUrl)}, ${link(coastline.licence, coastline.licenceUrl)}. ${coastline.changes}</p>`,
     );
   }
-  rows.push(`<p><b>Source code</b> ${link("github.com/ollytheninja/trains", REPO_URL)}</p>`);
+  rows.push(`<p><b>Source code</b> ${link("github.com/ollytheninja/wellington-in-motion", REPO_URL)}</p>`);
   el.innerHTML =
     `<button type="button" id="credits-toggle" aria-controls="credits-body"></button>` +
     `<div id="credits-body"><h2>Credits</h2>${rows.join("")}</div>`;
